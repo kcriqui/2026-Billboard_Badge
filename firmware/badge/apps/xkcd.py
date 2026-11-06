@@ -26,6 +26,12 @@ from lib.led_bar import leds
 
 UPDATE_S = 5 * 60
 RETRY_S = 60
+# Fast refresh (~5 s, black/white only) for comics without red; a normal
+# refresh when the app opens, when red is involved, and after this many fast
+# ones in a row (clears ghosting). Set USE_FAST_REFRESH = False to go back to
+# normal refreshes only (or create /data/no_fast_refresh on the badge).
+USE_FAST_REFRESH = True
+FAST_IN_A_ROW = 4
 MAX_DOWNLOAD = 1500000  # bytes; larger PNGs don't fit comfortably in RAM
 MIN_SCALE = 0.6  # skip comics that would shrink below this (unreadable)
 TRIES = 6  # random picks per update before giving up
@@ -163,6 +169,8 @@ class XkcdApp(BaseApp):
         self._header = None
         self._footer = None
         self._alt = None
+        self._fast_in_a_row = 0
+        self._prev_had_red = True  # unknown screen contents: assume red
 
     # ---- data -------------------------------------------------------------
 
@@ -268,6 +276,8 @@ class XkcdApp(BaseApp):
 
     def _message(self, title, text):
         """Full-screen text, used for errors before any comic is shown."""
+        self._fast_in_a_row = 0
+        self._prev_had_red = False
         display.clear()
         self._render_text(title, text, HEADER_H + MARGIN)
         display.update()
@@ -288,8 +298,15 @@ class XkcdApp(BaseApp):
         title = "#%d: %s" % (info["num"], info.get("safe_title") or info.get("title", ""))
         t = time.ticks_ms()
         self._render_text(title, info.get("alt"), y + h + MARGIN)
-        log("text in %d ms, starting panel refresh" % time.ticks_diff(time.ticks_ms(), t))
-        display.update()
+        has_red = max(display._framebuffer_red) != 0
+        fast = (USE_FAST_REFRESH and not self.launched and not has_red
+                and not self._prev_had_red and self._fast_in_a_row < FAST_IN_A_ROW)
+        self._fast_in_a_row = self._fast_in_a_row + 1 if fast else 0
+        self._prev_had_red = has_red
+        log("text in %d ms, starting %s refresh%s" % (
+            time.ticks_diff(time.ticks_ms(), t), "fast" if fast else "full",
+            " (comic has red)" if has_red else ""))
+        display.update(fast=fast)
 
     # ---- app loop ---------------------------------------------------------
 
