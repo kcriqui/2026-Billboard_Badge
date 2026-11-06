@@ -134,6 +134,25 @@ def _get(url, max_bytes=65536):
     return body
 
 
+NEXT_PATH = "/data/xkcd_next"
+
+
+def _take_requested():
+    """Comic number from /data/xkcd_next (used once, then deleted), or 0.
+
+    To show a particular comic next:
+        mpremote exec "open('/data/xkcd_next','w').write('1773')"
+    """
+    try:
+        with open(NEXT_PATH) as f:
+            num = int(f.read().strip())
+        os.remove(NEXT_PATH)
+        log("requested #%d" % num)
+        return num
+    except (OSError, ValueError):
+        return 0
+
+
 class XkcdApp(BaseApp):
     def __init__(self, name: str | None = None) -> None:
         super().__init__("XKCD")
@@ -156,8 +175,10 @@ class XkcdApp(BaseApp):
     def _fetch(self):
         """Pick random comics until one is a PNG that fits; return (info, png)."""
         latest = self._latest()
+        wanted = _take_requested()
         for _ in range(TRIES):
-            num = random.randint(1, latest)
+            num = wanted or random.randint(1, latest)
+            wanted = 0
             if num == 404:  # there is no comic 404
                 continue
             try:

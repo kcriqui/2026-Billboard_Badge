@@ -10,7 +10,14 @@ Each source pixel is sorted into white, black or red:
   - luminance below `threshold` (128 for strongly coloured pixels) -> black
   - anything else                              -> white
 A threshold above the usual 128 keeps anti-aliased line art from thinning out.
-When shrinking, a dark pixel wins over a light one so thin lines survive.
+Two scaling paths:
+  - enlarging (most XKCD comics): each source pixel is sorted as above and
+    copied to the screen pixels it covers (nearest neighbour). This keeps
+    small white text inside black shapes readable.
+  - shrinking: every screen pixel averages the source pixels it covers and
+    turns black if that average is below `shrink_threshold` (default 200,
+    i.e. bold). Plain thresholding or dithering breaks thin strokes apart;
+    averaging then cutting high keeps text solid.
 """
 
 import gc
@@ -161,6 +168,97 @@ def _blit(kinds, src_w: int, dst_w: int, dst_x: int, dy0: int, dy1: int, black, 
         dy += 1
 
 
+# ---- shrink path: average the source pixels behind each screen pixel ----
+# A "code" is a pixel's brightness 0..254, or 255 for red.
+_RED_CODE = const(255)
+
+
+@micropython.viper
+def _code(r: int, g: int, b: int) -> int:
+    if r > 127 and g < 128 and b < 128:
+        return _RED_CODE
+    lum = (r * 77 + g * 150 + b * 29) >> 8
+    hi = r
+    lo = r
+    if g > hi:
+        hi = g
+    if b > hi:
+        hi = b
+    if g < lo:
+        lo = g
+    if b < lo:
+        lo = b
+    if hi - lo > 64:  # strong colour: decide black/white at the midpoint now
+        if lum < 128:
+            return 0
+        return 254
+    if lum > 254:
+        return 254
+    return lum
+
+
+@micropython.viper
+def _code_direct(row, channels: int, width: int, out):
+    src = ptr8(row)
+    dst = ptr8(out)
+    c = 0
+    for x in range(width):
+        i = x * channels
+        if channels == 2:
+            c = src[i]
+            if c > 254:
+                c = 254
+            if src[i + 1] < 128:
+                c = 254
+        else:
+            c = int(_code(src[i], src[i + 1], src[i + 2]))
+            if channels == 4 and src[i + 3] < 128:
+                c = 254
+        dst[x] = c
+
+
+@micropython.viper
+def _accumulate(codes, src_w: int, dst_w: int, sums, reds):
+    """Add one source row into the per-column totals of the current screen row."""
+    c = ptr8(codes)
+    s = ptr32(sums)
+    r = ptr32(reds)
+    for x in range(src_w):
+        dx = x * dst_w // src_w
+        v = c[x]
+        if v == _RED_CODE:
+            r[dx] = r[dx] + 1
+        else:
+            s[dx] = s[dx] + v
+
+
+@micropython.viper
+def _emit(sums, reds, colcount, rows: int, dst_w: int, dst_x: int, dy: int,
+          threshold: int, black, red):
+    """Turn the averaged totals into one screen row, then clear them."""
+    s = ptr32(sums)
+    r = ptr32(reds)
+    n = ptr8(colcount)
+    bk = ptr8(black)
+    rd = ptr8(red)
+    base = dy * SCREEN_WIDTH + dst_x
+    for dx in range(dst_w):
+        cnt = n[dx] * rows
+        reds_here = r[dx]
+        if cnt > 0:
+            i = base + dx
+            byte = i >> 3
+            bit = 128 >> (i & 7)
+            if reds_here * 2 >= cnt:
+                rd[byte] = rd[byte] | bit
+                bk[byte] = bk[byte] & (255 ^ bit)
+            elif (s[dx] + reds_here * 254) // cnt < threshold:
+                bk[byte] = bk[byte] | bit
+                rd[byte] = rd[byte] & (255 ^ bit)
+        s[dx] = 0
+        r[dx] = 0
+
+
 def _read_full(stream, buf):
     """readinto() may return less than asked for; keep reading."""
     mv = memoryview(buf)
@@ -224,7 +322,8 @@ def png_size(data):
     return int.from_bytes(bytes(data[16:20]), "big"), int.from_bytes(bytes(data[20:24]), "big")
 
 
-def draw_fit(data, black, red, box_x, box_y, box_w, box_h, threshold=170, max_scale=3):
+def draw_fit(data, black, red, box_x, box_y, box_w, box_h, threshold=170,
+             max_scale=3, shrink_threshold=200):
     """Decode PNG bytes into the framebuffers, centred in the box.
 
     The box must already be white. Returns (x, y, w, h) of the drawn image.
@@ -237,6 +336,11 @@ def draw_fit(data, black, red, box_x, box_y, box_w, box_h, threshold=170, max_sc
     channels = _CHANNELS[ctype]
     bpp = max(1, channels * depth // 8)
     row_bytes = (src_w * channels * depth + 7) // 8
+
+    if dst_w < src_w:
+        _draw_shrunk(src_w, src_h, ctype, depth, palette, trns, idat,
+                     dst_x, dst_y, dst_w, dst_h, shrink_threshold, black, red)
+        return dst_x, dst_y, dst_w, dst_h
 
     lut = None
     if ctype in (0, 3):
@@ -274,3 +378,64 @@ def draw_fit(data, black, red, box_x, box_y, box_w, box_h, threshold=170, max_sc
     finally:
         stream.close()
     return dst_x, dst_y, dst_w, dst_h
+
+
+def _rows(idat, src_w, src_h, channels, depth):
+    """Yield unfiltered raw rows (the same buffer pair is reused)."""
+    bpp = max(1, channels * depth // 8)
+    row_bytes = (src_w * channels * depth + 7) // 8
+    prev = bytearray(row_bytes)
+    row = bytearray(row_bytes)
+    head = bytearray(1)
+    stream = deflate.DeflateIO(io.BytesIO(idat), deflate.ZLIB)
+    try:
+        for _ in range(src_h):
+            _read_full(stream, head)
+            _read_full(stream, row)
+            _unfilter(head[0], row, prev, bpp)
+            yield row
+            prev, row = row, prev
+    finally:
+        stream.close()
+
+
+def _draw_shrunk(src_w, src_h, ctype, depth, palette, trns, idat,
+                 dst_x, dst_y, dst_w, dst_h, threshold, black, red):
+    channels = _CHANNELS[ctype]
+    lut = None
+    if ctype in (0, 3):
+        lut = bytearray(1 << depth)
+        for s in range(1 << depth):
+            if ctype == 0:
+                v = s * 255 // ((1 << depth) - 1)
+                lut[s] = _code(v, v, v)
+            elif palette and s * 3 + 2 < len(palette):
+                lut[s] = _code(palette[s * 3], palette[s * 3 + 1], palette[s * 3 + 2])
+                if trns and s < len(trns) and trns[s] < 128:
+                    lut[s] = 254
+            else:
+                lut[s] = 254
+    # How many source columns land in each screen column.
+    colcount = bytearray(dst_w)
+    for x in range(src_w):
+        colcount[x * dst_w // src_w] += 1
+    codes = bytearray(src_w)
+    sums = bytearray(4 * dst_w)
+    reds = bytearray(4 * dst_w)
+    gc.collect()
+    cur = 0  # screen row being accumulated, relative to dst_y
+    rows = 0
+    for y, row in enumerate(_rows(idat, src_w, src_h, channels, depth)):
+        dy = y * dst_h // src_h
+        if dy != cur and rows:
+            _emit(sums, reds, colcount, rows, dst_w, dst_x, dst_y + cur, threshold, black, red)
+            rows = 0
+        cur = dy
+        if lut is not None:
+            _classify_lut(row, lut, depth, src_w, codes)
+        else:
+            _code_direct(row, channels, src_w, codes)
+        _accumulate(codes, src_w, dst_w, sums, reds)
+        rows += 1
+    if rows:
+        _emit(sums, reds, colcount, rows, dst_w, dst_x, dst_y + cur, threshold, black, red)
