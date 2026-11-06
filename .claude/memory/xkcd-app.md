@@ -25,6 +25,10 @@ the badge (no laptop needed) when the `Supercon` WiFi is in range.
 - Refresh: full on app launch, when the comic or the previous one has red,
   and every 10th update (Kevin's choice; `FAST_IN_A_ROW = 9`); fast otherwise.
   `USE_FAST_REFRESH = False` in apps/xkcd.py turns it off.
+- User B redraws the current comic with a full refresh (framebuffers still
+  hold it). Side-by-side photos of #871 (2026-11-06): fast vs full look the
+  same — fast blacks are, if anything, more neutral (full has a faint brown
+  tint in solid areas); no visible ghosting after one fast update.
 - Timing on badge: download ~0.5-3 s, convert ~1 s, LVGL text ~0.1 s, then the
   panel: ~36 s full (measured), ~5 s fast (Kevin confirmed on the badge, not instrumented). Buttons are unresponsive during download/convert.
 - Possible follow-up: switch WiFi off between updates if battery life is poor.

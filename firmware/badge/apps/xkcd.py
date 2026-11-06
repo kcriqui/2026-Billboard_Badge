@@ -2,6 +2,8 @@
 
 Needs WiFi credentials in /data/wifi.json (see lib/wifi.py).
 User A: fetch a new comic now.
+User B: redraw the current comic with a full refresh (clears ghosting, and
+lets you compare a fast-refreshed comic with the same one done properly).
 
 LEDs: blue while downloading, off when the comic is on its way to the panel,
 red if something failed (it retries a minute later).
@@ -20,7 +22,7 @@ import lvgl
 
 from apps.base_app import BaseApp
 from lib import fit_png, wifi
-from lib.button import UserA
+from lib.button import UserA, UserB
 from lib.epd import display, display_height, display_width
 from lib.led_bar import leds
 
@@ -352,3 +354,8 @@ class XkcdApp(BaseApp):
             self._update()
         elif UserA.pressed():
             self._update()
+        elif UserB.pressed() and display.is_done_updating():
+            # The comic is still in the framebuffers: just refresh it fully.
+            log("full redraw of the current comic (User B)")
+            self._fast_in_a_row = 0
+            display.update(fast=False)
