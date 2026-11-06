@@ -213,6 +213,8 @@ class EPaperDisplay:
         while True:
             if self._framebuffer_ready.is_set():
                 self._display_updated.clear()
+                progress = aio.create_task(self._led_progress())
+                started = time.ticks_ms()
                 fbk = memoryview(self._framebuffer_black)
                 fbr = memoryview(self._framebuffer_red)
                 for row in range(display_height):
@@ -244,11 +246,47 @@ class EPaperDisplay:
                         row * display_width_bytes + display_half_width_bytes : (row + 1)
                         * display_width_bytes
                     ]
-                await self.global_update(black_left, red_left, black_right, red_right)
+                try:
+                    await self.global_update(black_left, red_left, black_right, red_right)
+                finally:
+                    progress.cancel()
+                took = time.ticks_diff(time.ticks_ms(), started)
+                # Learn how long a refresh really takes, for the next bar.
+                self._refresh_ms = (self._refresh_ms + took) // 2
+                print("Display refresh took", took, "ms")
                 self._framebuffer_ready.clear()
                 gc.collect()
                 self._display_updated.set()
+                await self._led_done()
             await aio.sleep_ms(100)
+
+    # ---- refresh progress on the LED bar (works for every app) ----------
+
+    _refresh_ms = 36000  # first guess; replaced by measured times
+    _PROGRESS_LIT = (3, 2, 0)   # amber: filled part of the bar
+    _PROGRESS_HEAD = (6, 4, 0)  # brighter amber: the LED currently filling
+    _PROGRESS_DONE = (0, 4, 0)  # green: refresh finished
+
+    async def _led_progress(self):
+        """Fill the LED bar left to right over the expected refresh time."""
+        from lib.led_bar import leds, NUM_LEDS
+        start = time.ticks_ms()
+        blink = False
+        while True:
+            frac = time.ticks_diff(time.ticks_ms(), start) / self._refresh_ms
+            lit = min(int(frac * NUM_LEDS), NUM_LEDS - 1)  # never "done" early
+            blink = not blink
+            frame = [self._PROGRESS_LIT if i < lit else (0, 0, 0) for i in range(NUM_LEDS)]
+            frame[lit] = self._PROGRESS_HEAD if blink else (0, 0, 0)
+            leds.show_overlay(frame)
+            await aio.sleep_ms(250)
+
+    async def _led_done(self):
+        """Flash the bar green, then give the LEDs back to the app."""
+        from lib.led_bar import leds, NUM_LEDS
+        leds.show_overlay([self._PROGRESS_DONE] * NUM_LEDS)
+        await aio.sleep_ms(1500)
+        leds.clear_overlay()
 
     async def global_update(
         self,

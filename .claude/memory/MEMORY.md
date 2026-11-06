@@ -4,4 +4,4 @@
 - [Badge dev workflow](badge-dev-workflow.md) — badge port, dev.sh push, safe REPL inspection, laptop previews
 - [Badge gotchas](badge-gotchas.md) — LVGL re-init hang, USB freezes, requests crash, lost writes
 - [XKCD app](xkcd-app.md) — hybrid scaling (no dithering), WiFi file, log, xkcd_next
-- [Nametag](nametag.md) — xkcd Script "Kevin" at 116 px, how to regenerate
+- [Nametag](nametag.md) — name tag + photos (A/B), xkcd Script "Kevin", make_nametag/make_photo tools

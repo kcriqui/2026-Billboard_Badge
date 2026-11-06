@@ -32,6 +32,7 @@ class LedBar:
             for i in range(NUM_LEDS):
                 self.leds.append([0, 0, 0])
         self.output = []
+        self.overlay = None  # see show_overlay()
 
         # LED pattern sequencer
         self.sequence_func = None
@@ -93,18 +94,45 @@ class LedBar:
         else:
             for i in range(NUM_LEDS):
                 self.leds[i] = val
-        self.leds.write()
+        self._out()
 
     def clear(self):
         self.leds.fill((0,0,0))
-        self.leds.write()
+        self._out()
 
 
     def write(self):
         """Write the buffered values out to the actual LEDs"""
-        if sys.platform == "esp32":
-            self.leds.write()  # pyright: ignore[reportAttributeAccessIssue]
+        self._out()
         return [(led[0], led[1], led[2]) for led in self.leds]
+
+    def _out(self):
+        """Push to the hardware: the overlay if one is set, else the buffer.
+
+        Every write goes through here, so an overlay (e.g. the display's
+        refresh progress bar) can't be overwritten by apps or the menu,
+        and the app's own LEDs reappear unchanged when it is removed.
+        """
+        if sys.platform != "esp32":
+            return
+        if self.overlay is None:
+            self.leds.write()  # pyright: ignore[reportAttributeAccessIssue]
+            return
+        saved = [self.leds[i] for i in range(NUM_LEDS)]
+        for i in range(NUM_LEDS):
+            self.leds[i] = self.overlay[i]
+        self.leds.write()  # pyright: ignore[reportAttributeAccessIssue]
+        for i in range(NUM_LEDS):
+            self.leds[i] = saved[i]
+
+    def show_overlay(self, frame):
+        """Show `frame` (NUM_LEDS colour tuples) on top of everything else."""
+        self.overlay = frame
+        self._out()
+
+    def clear_overlay(self):
+        self.overlay = None
+        self._out()
 
     async def update(self):
         sequence_generator = None
@@ -121,7 +149,7 @@ class LedBar:
                     for idx, led in enumerate(new_leds):
                         self.leds[idx] = led
                     if sys.platform == "esp32":
-                        self.leds.write()  # pyright: ignore[reportAttributeAccessIssue]
+                        self._out()
                         await aio.sleep_ms(int(sleep_ms))
                     else:  # Running in cpython
                         await aio.sleep(sleep_ms / 1000.0)

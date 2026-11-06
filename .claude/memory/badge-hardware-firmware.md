@@ -18,6 +18,11 @@ metadata:
   holds converted fast LUTs that nothing uses. Porting fast refresh to
   MicroPython was offered and declined for now (2026-11-06).
 - Buttons: the Menu +/- silkscreen labels are swapped (noted in lib/button.py).
+- LED bar: during every panel refresh `lib/epd.py` shows an amber progress
+  bar (filling over the measured refresh time) then a green flash, via
+  `leds.show_overlay()`/`clear_overlay()` in `lib/led_bar.py`. All LED writes
+  go through `LedBar._out()`, so the overlay wins over app/menu LEDs and
+  theirs reappear afterwards — don't call the NeoPixel `write()` directly.
 - Power: single-cell LiPo pads + MCP73831 charger on the back. Whether Kevin's
   badge has a battery fitted is unknown; battery life with WiFi left on is
   untested. Without a battery, unplugging USB restarts the badge.

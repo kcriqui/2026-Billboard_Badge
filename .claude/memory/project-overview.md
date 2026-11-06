@@ -18,8 +18,15 @@ it off around the con.
   from design decisions; it is not a repo.
 
 Apps Kevin added (all on the badge and committed as of 2026-11-06):
-Hello (template example), XKCD ([[xkcd-app]]), handwritten Nametag
-([[nametag]]); plus "reopen last app after restart" in the app switcher.
+Hello (template example), XKCD ([[xkcd-app]]), handwritten Nametag with
+photos ([[nametag]]); plus "reopen last app after restart" in the app
+switcher and an LED-bar refresh progress indicator for every app.
+
+Parked: wiring a GY-MAX4466 microphone (Kevin will solder it later). Plan:
+3.3 V + GND from an SAO port, OUT to an ADC1 pin (GPIO4/5 on SAO2 or the
+GPIO9 pad; ADC2 is unusable with WiFi on). Favoured app: sound-reactive LED
+bar + applause leaderboard on the e-paper. Calvin and Hobbes was ruled out
+(no legitimate open source of strips).
 
 **How to apply:** work and commit in the fork; see [[badge-dev-workflow]] for
 deploying and [[badge-gotchas]] before touching the display, USB or networking.

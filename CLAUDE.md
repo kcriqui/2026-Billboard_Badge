@@ -15,6 +15,6 @@
 - [badge-dev-workflow](.claude/memory/badge-dev-workflow.md) — port, deploy, safe inspection, laptop previews
 - [badge-gotchas](.claude/memory/badge-gotchas.md) — known hangs/crashes and workarounds
 - [xkcd-app](.claude/memory/xkcd-app.md) — XKCD app design decisions
-- [nametag](.claude/memory/nametag.md) — name tag choices and regeneration
+- [nametag](.claude/memory/nametag.md) — name tag + photos, choices and regeneration
 
 Keep these files current: update or delete stale facts rather than appending.
