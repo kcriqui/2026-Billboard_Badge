@@ -2,7 +2,7 @@
 """Write a name into the blank "Hello I am..." tag for the badge's Nametag app.
 
     python3 tools/make_nametag.py Kevin
-    python3 tools/make_nametag.py "Ada L." --height 70 --font /path/to/font.ttf
+    python3 tools/make_nametag.py "Ada L." --height 90 --font /path/to/font.ttf
 
 Output: firmware/badge/data/graphics/hello_i_am_<name>.png (plus a copy in
 assets/graphics/). The Nametag app shows any hello_i_am_<name>.png in
@@ -57,7 +57,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("name")
     ap.add_argument("--font", default=REPO / "tools/fonts/xkcd-script.ttf")
-    ap.add_argument("--height", type=int, default=86, help="text height in pixels (default 86)")
+    ap.add_argument("--height", type=int, default=116, help="text height in pixels (default 116)")
     ap.add_argument("--stroke", type=int, default=0, help="extra pen thickness in pixels")
     args = ap.parse_args()
     img = make(args.name, args.font, args.height, args.stroke)
