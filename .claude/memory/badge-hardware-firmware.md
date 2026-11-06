@@ -26,5 +26,7 @@ metadata:
 - Power: single-cell LiPo pads + MCP73831 charger on the back. Whether Kevin's
   badge has a battery fitted is unknown; battery life with WiFi left on is
   untested. Without a battery, unplugging USB restarts the badge.
-- Menu order is alphabetical by app file, and Schedule contributes 3 apps:
+- Menu order as seen on the badge (Schedule contributes 3 apps):
   Workshops, Sat Talks, Sun Talks, Gallery, Hello, Nametag, XKCD.
+  It follows the order apps are discovered, not the names — check
+  `switcher.apps` rather than assuming when adding apps.
