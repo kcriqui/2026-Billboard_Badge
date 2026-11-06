@@ -1,2 +1,5 @@
 # Badge WiFi credentials - never commit
 firmware/badge/data/wifi.json
+
+# Third-party fonts used by tools/make_nametag.py (download, not committed)
+tools/fonts/

@@ -98,6 +98,7 @@ class AppSwitcher:
                     leds.fill((0, 0, 0))
                     leds.write()
                     self.selecting_mode = False
+                    _save_last_app(self.apps[self.active_idx].name)
                 await aio.sleep_ms(10)
             else:
                 if MenuMinus.pressed() or MenuPlus.pressed():
@@ -112,4 +113,45 @@ class AppSwitcher:
                 self.apps[self.active_idx].launched = False
 
 
+    def restore_last_app(self):
+        """Reopen the app that was running before a restart.
+
+        Hold Menu + or Menu - while the badge starts to go to the menu instead
+        (the way out if an app keeps crashing the badge).
+        """
+        if MenuMinus.pin.value() or MenuPlus.pin.value():
+            print("Menu button held at boot: starting in the menu")
+            return
+        try:
+            with open(LAST_APP_PATH) as f:
+                name = f.read().strip()
+        except OSError:
+            return
+        for idx, app in enumerate(self.apps):
+            if app.name == name:
+                print(f"Reopening last app: {name}")
+                self.active_idx = self.selection_idx = idx
+                app.launched = True
+                self.selecting_mode = False
+                return
+
+
+LAST_APP_PATH = "/data/last_app"
+
+
+def _save_last_app(name: str):
+    try:
+        with open(LAST_APP_PATH) as f:
+            if f.read().strip() == name:
+                return  # unchanged; spare the flash a write
+    except OSError:
+        pass
+    try:
+        with open(LAST_APP_PATH, "w") as f:
+            f.write(name)
+    except OSError as ex:
+        print("Could not save last app:", ex)
+
+
 switcher = AppSwitcher()
+switcher.restore_last_app()

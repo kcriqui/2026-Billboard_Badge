@@ -18,6 +18,14 @@ _NAME_BOTTOM = 557
 _NAME_DY = (_NAME_TOP + _NAME_BOTTOM) // 2 - display_height // 2
 
 
+def _named_tag():
+    import os
+    for name in sorted(os.listdir("/data/graphics")):
+        if name.startswith("hello_i_am_") and name.endswith(".png") and name != "hello_i_am_blank.png":
+            return "/data/graphics/" + name
+    return None
+
+
 class NametagApp(BaseApp):
     def __init__(self, name: str | None = None) -> None:
         self.name = "Nametag"
@@ -27,6 +35,14 @@ class NametagApp(BaseApp):
     def run(self):
         if self.launched:
             leds.fill((0,1,1))
+            # A filled-in tag (data/graphics/hello_i_am_<name>.png) wins over
+            # the blank one plus LVGL text.
+            named = _named_tag()
+            if named:
+                display.draw_png(named)
+                display.update()
+                leds.fill((0,1,0))
+                return
             display.draw_png("/data/graphics/hello_i_am_blank.png")
 
             scr = lvgl.obj()
