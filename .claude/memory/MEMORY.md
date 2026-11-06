@@ -1,0 +1,7 @@
+- [Project overview](project-overview.md) — repos, remotes, what's been built, where files live
+- [Working with Kevin](working-with-kevin.md) — previews before choices, Kevin tests on hardware, push often
+- [Badge hardware & firmware](badge-hardware-firmware.md) — MicroPython 1.24.1/LVGL 9.3, real font list, slow refresh, power
+- [Badge dev workflow](badge-dev-workflow.md) — badge port, dev.sh push, safe REPL inspection, laptop previews
+- [Badge gotchas](badge-gotchas.md) — LVGL re-init hang, USB freezes, requests crash, lost writes
+- [XKCD app](xkcd-app.md) — hybrid scaling (no dithering), WiFi file, log, xkcd_next
+- [Nametag](nametag.md) — xkcd Script "Kevin" at 116 px, how to regenerate

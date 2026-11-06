@@ -1,0 +1,27 @@
+---
+name: xkcd-app
+description: Design decisions behind the XKCD app (scaling, dithering rejected, WiFi file, logging, picking a comic) and why
+metadata:
+  type: project
+---
+
+Shows a random xkcd every 5 minutes; User A fetches one now. Works fully on
+the badge (no laptop needed) when the `Supercon` WiFi is in range.
+
+- **Scaling is hybrid** (`lib/fit_png.py`): shrinking → area-average + bold
+  threshold 200; enlarging (most comics) → nearest-neighbour, threshold 170,
+  strong colours at 128. **Why:** Kevin asked for dithering; side-by-side
+  previews showed Floyd-Steinberg/Atkinson turn text into speckle, and
+  averaging fills white text inside black shapes when enlarging. Don't
+  re-propose dithering for line art.
+- Skips JPEGs (early comics), >1.5 MB files, and comics that would shrink
+  below 60 % (unreadable); comic 404 doesn't exist.
+- Own HTTPS client in `apps/xkcd.py` — see [[badge-gotchas]] (requests crash).
+- WiFi credentials: `firmware/badge/data/wifi.json` (gitignored; Kevin writes
+  it — never handle the password). Template: `wifi.json.example`.
+- Debug log on flash: `/data/xkcd.log` (fresh per launch, capped at 8 KB).
+- Show a specific comic next: write its number to `/data/xkcd_next` (with
+  `with open`), it is used once and deleted.
+- Timing on badge: download ~0.5-3 s, convert ~1 s, LVGL text ~1 s, then the
+  ~35 s panel refresh. Buttons are unresponsive during download/convert.
+- Possible follow-up: switch WiFi off between updates if battery life is poor.
