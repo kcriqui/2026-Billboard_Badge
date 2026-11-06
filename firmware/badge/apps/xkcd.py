@@ -28,10 +28,10 @@ UPDATE_S = 5 * 60
 RETRY_S = 60
 # Fast refresh (~5 s, black/white only) for comics without red; a normal
 # refresh when the app opens, when red is involved, and after this many fast
-# ones in a row (clears ghosting). Set USE_FAST_REFRESH = False to go back to
+# ones in a row (clears ghosting; Kevin: full refresh every 10th). Set USE_FAST_REFRESH = False to go back to
 # normal refreshes only (or create /data/no_fast_refresh on the badge).
 USE_FAST_REFRESH = True
-FAST_IN_A_ROW = 4
+FAST_IN_A_ROW = 9  # so every 10th update is a full one
 MAX_DOWNLOAD = 1500000  # bytes; larger PNGs don't fit comfortably in RAM
 MIN_SCALE = 0.6  # skip comics that would shrink below this (unreadable)
 TRIES = 6  # random picks per update before giving up

@@ -17,10 +17,13 @@ metadata:
   which uses hardware SPI + viper): LVGL 960x120 text 2657 → 105 ms,
   split/bit-reverse/SPI send ~5.3 s → ~0.4 s, panel waveform ~34.9 s both
   (physics), update() to done 44.5 → 36.5 s. PNG decode (large_png, 3-9 s,
-  varies) is untouched by #4. Fast (~3.5 s, black/white) refresh exists only in the
-  PlatformIO driver `firmware/esp32s3-itc97/`; `badge/data/rendered_luts.py`
-  holds converted fast LUTs that nothing uses. Porting fast refresh to
-  MicroPython was offered and declined for now (2026-11-06).
+  varies) is untouched by #4.
+- Fast refresh: `display.update(fast=True[, keep_red=True, passes=N])`, ported
+  from upstream PR #3 (only its epd.py fast-refresh parts). Short waveform
+  from `data/rendered_luts.py` written to 0xB0, re-triggered 3x on driver B.
+  Black/white only (red goes pale), ghosting builds up. Kevin found it "fast
+  and clean". Kill switch: create `/data/no_fast_refresh` on the badge (checked
+  every update). Falls back to a full refresh if the LUT can't load.
 - Buttons: the Menu +/- silkscreen labels are swapped (noted in lib/button.py).
 - LED bar: during every panel refresh `lib/epd.py` shows an amber progress
   bar (filling over the measured refresh time) then a green flash, via
