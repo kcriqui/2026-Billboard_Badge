@@ -8,6 +8,14 @@ import pathlib
 import subprocess
 from typing import Iterable
 
+# Set by --port or $BADGE_PORT. With more than one board plugged in, plain
+# "mpremote" connects to whichever it finds first, which may not be the badge.
+MPREMOTE = ["mpremote"]
+
+# Files the badge rewrites at runtime. push only creates them, never overwrites,
+# so pushing code does not reset the boot counter and re-show the splash screen.
+BADGE_STATE_FILES = {"/data/panel_config.json"}
+
 
 def check_path(path: str, ) -> dict[str, bytes]:
     files: dict[str, bytes] = {}
@@ -40,7 +48,7 @@ def format_recursive_path(name: str) -> str:
 
 def get_badge_files() -> dict[str, str]:
     """Get the files on the badge and their checksums."""
-    badge_files_text = subprocess.run(["mpremote", "run", "./scripts/check_filesystem.py"], capture_output=True, text=True).stdout
+    badge_files_text = subprocess.run([*MPREMOTE, "run", "./scripts/check_filesystem.py"], capture_output=True, text=True).stdout
     badge_files = {}
     for line in badge_files_text.split("\n"):
         if " " in line:
@@ -57,7 +65,10 @@ if __name__ == "__main__":
     parser.add_argument("action", type=str, nargs="?", default="ls", help="Action to perform: 'ls' to list files (default), 'push' to push files, 'pull' to pull files.")
     parser.add_argument("--reset", action="store_true", default=False, help="Reset the badge after.")
     parser.add_argument("--verbose", "-v", action="store_true", default=False)
+    parser.add_argument("--port", "-p", default=os.environ.get("BADGE_PORT"), help="Serial port of the badge (default: $BADGE_PORT, else mpremote's auto-detect).")
     args = parser.parse_args()
+    if args.port:
+        MPREMOTE = ["mpremote", "connect", args.port]
     if args.action not in ("ls", "list", "push", "pull"):
         print(f"Unknown action '{args.action}'. Use 'ls', 'push', or 'pull'.")
         exit(1)
@@ -71,13 +82,16 @@ if __name__ == "__main__":
             hash = local_files[name]
             if name not in badge_files and hash == "":
                 print(f"Creating directory {name}...")
-                subprocess.run(["mpremote", "mkdir", name], check=True)
+                subprocess.run([*MPREMOTE, "mkdir", name], check=True)
+            elif name in BADGE_STATE_FILES and name in badge_files:
+                if args.verbose:
+                    print(f"{name} is badge state, leaving it alone.")
             elif name not in badge_files or badge_files[name] != hash:
                 if name not in badge_files:
                     print(f"Creating {name}...")
                 else:
                     print(f"Updating {name}...")
-                subprocess.run(["mpremote", "cp", f"badge{name}", f":{name}"], check=True)
+                subprocess.run([*MPREMOTE, "cp", f"badge{name}", f":{name}"], check=True)
             else:
                 if args.verbose:
                     print(f"{name} is up to date.")
@@ -90,17 +104,17 @@ if __name__ == "__main__":
             if badge_files[name] == "":
                 # Can't use rmdir because __pycache__ will linger
                 print(f"Removing directory {name} from badge...")
-                subprocess.run(["mpremote", "rm", "-r", name], check=True)
+                subprocess.run([*MPREMOTE, "rm", "-r", name], check=True)
             else:
                 print(f"Deleting {name} from badge...")
-                subprocess.run(["mpremote", "rm", name], check=True)
+                subprocess.run([*MPREMOTE, "rm", name], check=True)
 
     if args.action == "pull":
         print("Pulling files from badge...")
         badge_files = get_badge_files()
         if not os.path.exists("badge-backup"):
             os.makedirs("badge-backup")
-        file_text = subprocess.run(["mpremote", "cp", "-r", ":", "badge-backup/"], check=True)
+        file_text = subprocess.run([*MPREMOTE, "cp", "-r", ":", "badge-backup/"], check=True)
         # for name in badge_files.keys():
         #     print(f"Pulling {name}...")
         #     with open(f"badge-backup/{name}", "w") as file:
@@ -133,4 +147,4 @@ if __name__ == "__main__":
 
     if args.reset:
         print("Resetting badge...")
-        subprocess.run(["mpremote", "reset"], check=True)
+        subprocess.run([*MPREMOTE, "reset"], check=True)

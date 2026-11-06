@@ -1,0 +1,10 @@
+{
+  "include": ["firmware/badge"],
+  "extraPaths": ["firmware/badge"],
+  "stubPath": "typings",
+  "typeshedPath": "typings",
+  "pythonPlatform": "Linux",
+  "reportMissingModuleSource": "none",
+  "reportMissingImports": "warning",
+  "reportAttributeAccessIssue": "warning"
+}
