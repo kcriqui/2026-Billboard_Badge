@@ -26,5 +26,5 @@ the badge (no laptop needed) when the `Supercon` WiFi is in range.
   and every 10th update (Kevin's choice; `FAST_IN_A_ROW = 9`); fast otherwise.
   `USE_FAST_REFRESH = False` in apps/xkcd.py turns it off.
 - Timing on badge: download ~0.5-3 s, convert ~1 s, LVGL text ~0.1 s, then the
-  panel: ~36 s full (measured), ~5 s fast (estimate, not timed). Buttons are unresponsive during download/convert.
+  panel: ~36 s full (measured), ~5 s fast (Kevin confirmed on the badge, not instrumented). Buttons are unresponsive during download/convert.
 - Possible follow-up: switch WiFi off between updates if battery life is poor.
