@@ -22,6 +22,13 @@ Hello (template example), XKCD ([[xkcd-app]]), handwritten Nametag with
 photos ([[nametag]]); plus "reopen last app after restart" in the app
 switcher and an LED-bar refresh progress indicator for every app.
 
+Upstream PR #4 (trandi, faster epd.py) is merged into the fork as a real
+merge of its commit, with our changes on top: its LED-0 blinking removed in
+favour of our progress bar, and its `_reverse_fb_bits` toggling replaced
+(see [[badge-gotchas]]). When Hackaday merges #4 (or #3, which rewrites the
+same file), expect conflicts in `lib/epd.py` around `run()`; keep the
+progress bar hooks. No upstream PRs were merged as of 2026-11-06.
+
 Parked: wiring a GY-MAX4466 microphone (Kevin will solder it later). Plan:
 3.3 V + GND from an SAO port, OUT to an ADC1 pin (GPIO4/5 on SAO2 or the
 GPIO9 pad; ADC2 is unusable with WiFi on). Favoured app: sound-reactive LED
