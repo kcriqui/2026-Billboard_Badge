@@ -32,6 +32,7 @@ import asyncio as aio
 import btree
 import framebuf
 import gc
+import os
 from machine import Pin, SPI, SoftSPI
 import micropython
 from micropython import const
@@ -136,6 +137,29 @@ def _fast_split_no_reverse(src_fb: ptr8, dst_left: ptr8, dst_right: ptr8):
             dst_right[dst_row + c] = src_fb[src_row + 60 + c]
 
 
+# ---- fast refresh (ported from upstream PR #3 by FacioErgoSum) ------------
+# On driver B the panel runs each refresh for a fixed ~1 s, so a fast update
+# re-triggers the latched short waveform this many times.
+FAST_PULLS_B = 3
+FAST_PULLS_8 = 1
+# If this file exists on the badge, fast requests become normal refreshes.
+NO_FAST_REFRESH_PATH = "/data/no_fast_refresh"
+
+
+def _keep_red_lut(lut, group_size, groups):
+    """Copy of a fast LUT with the red tables (2 and 3) replaced by idle
+    groups, so red pixels get no drive. Table index is (red bit << 1) | bw bit;
+    the idle group is the table's own last VCOM group (ground, one frame)."""
+    b = bytearray(lut)
+    idle_at = (4 * groups + groups - 1) * group_size
+    idle = bytes(b[idle_at:idle_at + group_size])
+    for t in (2, 3):
+        for g in range(groups):
+            o = (t * groups + g) * group_size
+            b[o:o + group_size] = idle
+    return bytes(b)
+
+
 class EPaperDisplay:
     width = display_width
     height = display_height
@@ -173,6 +197,10 @@ class EPaperDisplay:
                     self._reverse_fb_bits = True
         except OSError:
             self._reverse_fb_bits = True
+        # E2969JS084 = "driver 8", E2969JS0B1 = "driver B" (see rendered_luts.py)
+        self._driver_b = self._reverse_fb_bits
+        self._fast_luts = None  # loaded on the first fast update
+        self._request = (False, None, False)  # fast, passes, keep_red
 
         # The framebuffers are set and display should be updated.
         self._framebuffer_ready = aio.Event()
@@ -241,10 +269,27 @@ class EPaperDisplay:
         )
         disp.flush_ready()
 
-    def update(self):
-        """Done updating the framebuffer, update the display with the contents"""
+    def update(self, fast=False, passes=None, keep_red=False):
+        """Done updating the framebuffer, update the display with the contents.
+
+        fast=True: short waveform (~4-6 s instead of ~35 s), black and white
+        only — red comes up pale, and ghosting builds up, so do a normal
+        update now and then and for anything with red. keep_red=True leaves
+        red already on the panel undriven. passes overrides the pull count.
+        Ported from upstream PR #3 (FacioErgoSum). Create /data/no_fast_refresh
+        on the badge to turn every fast request into a normal refresh.
+        """
+        self._request = (fast, passes, keep_red)
         self._display_updated.clear()
         self._framebuffer_ready.set()
+
+    @staticmethod
+    def fast_refresh_allowed():
+        try:
+            os.stat(NO_FAST_REFRESH_PATH)
+            return False
+        except OSError:
+            return True
 
     def clear(self):
         """Clear framebuffers to full white"""
@@ -279,7 +324,14 @@ class EPaperDisplay:
         while True:
             if self._framebuffer_ready.is_set():
                 self._display_updated.clear()
-                progress = aio.create_task(self._led_progress())
+                fast, passes, keep_red = self._request
+                if fast and not self.fast_refresh_allowed():
+                    print("EPD: fast refresh switched off (%s)" % NO_FAST_REFRESH_PATH)
+                    fast = False
+                if fast and self._fast_lut(keep_red) is None:
+                    fast = False
+                mode = "fast" if fast else "full"
+                progress = aio.create_task(self._led_progress(self._refresh_ms[mode]))
                 started = time.ticks_ms()
                 t0 = time.ticks_ms()
                 if self._reverse_fb_bits:
@@ -304,14 +356,15 @@ class EPaperDisplay:
                 # longer reverses, so there is nothing to switch off.
                 try:
                     await self.global_update(
-                        black_left, red_left, black_right, red_right
+                        black_left, red_left, black_right, red_right,
+                        fast, passes, keep_red,
                     )
                 finally:
                     progress.cancel()
                 took = time.ticks_diff(time.ticks_ms(), started)
-                # Learn how long a refresh really takes, for the next bar.
-                self._refresh_ms = (self._refresh_ms + took) // 2
-                print("Display refresh took", took, "ms")
+                # Learn how long each kind of refresh really takes, for the bar.
+                self._refresh_ms[mode] = (self._refresh_ms[mode] + took) // 2
+                print("Display refresh (%s) took %d ms" % (mode, took))
                 self._framebuffer_ready.clear()
                 gc.collect()
                 self._display_updated.set()
@@ -320,17 +373,18 @@ class EPaperDisplay:
 
     # ---- refresh progress on the LED bar (works for every app) ----------
 
-    _refresh_ms = 36000  # first guess; replaced by measured times
+    # First guesses; replaced by measured times.
+    _refresh_ms = {"full": 36000, "fast": 6000}
     _PROGRESS_LIT = (3, 2, 0)   # amber: filled part of the bar
     _PROGRESS_HEAD = (6, 4, 0)  # brighter amber: the LED currently filling
     _PROGRESS_DONE = (0, 4, 0)  # green: refresh finished
 
-    async def _led_progress(self):
+    async def _led_progress(self, expected_ms):
         """Fill the LED bar left to right over the expected refresh time."""
         start = time.ticks_ms()
         blink = False
         while True:
-            frac = time.ticks_diff(time.ticks_ms(), start) / self._refresh_ms
+            frac = time.ticks_diff(time.ticks_ms(), start) / expected_ms
             lit = min(int(frac * NUM_LEDS), NUM_LEDS - 1)  # never "done" early
             blink = not blink
             frame = [self._PROGRESS_LIT if i < lit else (0, 0, 0) for i in range(NUM_LEDS)]
@@ -350,8 +404,16 @@ class EPaperDisplay:
         red_left: bytearray | bytes | memoryview[int],
         black_right: bytearray | bytes | memoryview[int],
         red_right: bytearray | bytes | memoryview[int],
+        fast=False,
+        passes=None,
+        keep_red=False,
     ):
-        print("Updating display to new image")
+        wave = self._fast_lut(keep_red) if fast else None
+        if wave is None:
+            passes = 1
+        elif passes is None:
+            passes = FAST_PULLS_B if self._driver_b else FAST_PULLS_8
+        print("Updating display to new image (%s)" % ("fast x%d" % passes if wave else "full"))
         await self._reset()
         tick = time.ticks_ms()
         self._send_images(black_left, red_left, black_right, red_right)
@@ -361,12 +423,38 @@ class EPaperDisplay:
         print("display working")
         tick = time.ticks_ms()
         await self.cog_initial()
+        if wave is not None:
+            # After the 0x44/0x45/0xA7 sequence (which loads the OTP waveform
+            # into these registers) and before the DC/DC soft start.
+            self._send_index_data(0xB0, wave)
         await self._dcdc_soft_start()
-        await self._display_refresh()
+        for _ in range(max(1, passes)):
+            # Later passes re-trigger the latched waveform; nothing is resent.
+            await self._display_refresh()
         await self._dcdc_soft_shutdown()
         print("Done updating display")
         tock = time.ticks_ms()
         print(tock - tick)
+
+    def _fast_lut(self, keep_red):
+        """The short waveform for this panel, or None (then: full refresh)."""
+        if self._fast_luts is None:
+            try:
+                import data.rendered_luts as L
+                if self._driver_b:
+                    base = bytes(L.lutb_base)
+                    self._fast_luts = (base, _keep_red_lut(base, 8, 10))
+                else:
+                    base = bytes(L.lut8_nored_clear)
+                    self._fast_luts = (base, _keep_red_lut(base, 4, 9))
+                del L
+                gc.collect()
+            except Exception as ex:
+                print(f"EPD: no fast waveform ({ex}), using a full refresh")
+                self._fast_luts = ()
+        if not self._fast_luts:
+            return None
+        return self._fast_luts[1 if keep_red else 0]
 
     async def cog_initial(self):
         self._send_index_data(0x05, [0x7D])

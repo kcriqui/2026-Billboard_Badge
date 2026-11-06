@@ -22,6 +22,9 @@ the badge (no laptop needed) when the `Supercon` WiFi is in range.
 - Debug log on flash: `/data/xkcd.log` (fresh per launch, capped at 8 KB).
 - Show a specific comic next: write its number to `/data/xkcd_next` (with
   `with open`), it is used once and deleted.
-- Timing on badge: download ~0.5-3 s, convert ~1 s, LVGL text ~1 s, then the
-  ~35 s panel refresh. Buttons are unresponsive during download/convert.
+- Refresh: full on app launch, when the comic or the previous one has red,
+  and every 10th update (Kevin's choice; `FAST_IN_A_ROW = 9`); fast otherwise.
+  `USE_FAST_REFRESH = False` in apps/xkcd.py turns it off.
+- Timing on badge: download ~0.5-3 s, convert ~1 s, LVGL text ~0.1 s, then the
+  panel: ~36 s full, ~5 s fast. Buttons are unresponsive during download/convert.
 - Possible follow-up: switch WiFi off between updates if battery life is poor.
