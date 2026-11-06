@@ -5,6 +5,7 @@ metadata:
   type: feedback
 ---
 
+- Kevin uses he/him.
 - For anything visual (image conversion, fonts, sizes), render options side
   by side on the laptop and let Kevin pick before deploying. **Why:** Kevin
   changed direction after seeing previews (dithering → hybrid scaling; font
