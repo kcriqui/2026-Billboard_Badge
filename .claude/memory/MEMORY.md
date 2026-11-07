@@ -5,3 +5,4 @@
 - [Badge gotchas](badge-gotchas.md) — LVGL re-init hang, USB freezes, requests crash, lost writes
 - [XKCD app](xkcd-app.md) — hybrid scaling (no dithering), WiFi file, log, xkcd_next
 - [Nametag](nametag.md) — name tag + photos (A/B), xkcd Script "Kevin", make_nametag/make_photo tools
+- [Earth app](earth-app.md) — ISS + quakes "long exposure" map, ghosting design, attribution rules, next ideas

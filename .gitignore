@@ -3,3 +3,6 @@ firmware/badge/data/wifi.json
 
 # Third-party fonts used by tools/make_nametag.py (download, not committed)
 tools/fonts/
+
+# Third-party map data used by tools/make_world_map.py (download, not committed)
+tools/data/

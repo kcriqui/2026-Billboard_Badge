@@ -39,3 +39,10 @@ The badge firmware picks a color for each pixel based on this logic:
 Additionally, since the display is so large, loading large images can easily run out of memory. Therefore, it is best to compress each image down to a limited color space before placing on the badge. This is easily done with [ImageMagick](https://imagemagick.org/), namely with the command `magick oldfile.png -remap scripts/palette.gif newfile.png`. This reduces the image down to a colorspace that only supports 3 colors, which are white, black, and red.
 
 Based on the above pixel logic, where each pixel is already one of the three supported colors, it's easy to see how the image will be displayed. Luckily, but converting the image on your computer, you can see what it will look like before rendering it on the badge.
+
+# Credits (Kevin's fork)
+
+- **Long Exposure Earth** app (`firmware/badge/apps/earth.py`): Made with [Natural Earth](https://www.naturalearthdata.com). Free vector and raster map data @ naturalearthdata.com (public domain); the red world map `firmware/badge/data/earth/world.png` is rendered from `ne_110m_land` by `tools/make_world_map.py`. Live data: ISS position from [wheretheiss.at](https://wheretheiss.at), earthquakes from the [USGS Earthquake Hazards Program](https://earthquake.usgs.gov/earthquakes/feed/).
+- **XKCD** app: comics by Randall Munroe, [xkcd.com](https://xkcd.com) (CC BY-NC 2.5), fetched live; not redistributed here.
+- **Nametag** handwriting: [xkcd Script](https://github.com/ipython/xkcd-font) font (CC BY-NC 3.0), used to render the name tag image; the font itself is not committed.
+- Fast refresh ported from upstream PR #3 (FacioErgoSum); faster display driver merged from upstream PR #4 (trandi).
