@@ -15,9 +15,9 @@ metadata:
 - WiFi networks: `firmware/badge/data/wifi.json` on the laptop is the master
   (push overwrites the badge's copy). It holds a list; the badge tries the
   ones in range. `python3 tools/add_wifi.py [conn names]` merges networks
-  saved in NetworkManager without printing passwords. 2026-11-06: all 12
-  saved WPA networks added (Kevin OK'd taking them from the laptop); the
-  OWE "#SFO FREE WIFI" was skipped.
+  saved in NetworkManager without printing passwords. 2026-11-06: Kevin
+  OK'd taking them from the laptop, then trimmed the list himself to 6
+  (home, mom's, Supercon...). Don't re-add the ones he removed.
 - No OTA: Kevin tried WiFi push and GitHub-pull OTA (2026-11-06) and chose
   USB-only updates. Don't re-propose OTA.
 - After any `mpremote` command that soft-resets (cp, exec without `resume`),
