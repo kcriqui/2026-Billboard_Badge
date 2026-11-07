@@ -24,9 +24,14 @@ flights so tracks carry on across view changes; labels sit at launch points
 (moving labels smeared). Heads are rotated missile shapes; a faint dotted
 path runs from each head to a dotted circle at its target. Dots are 2x2
 (lone single pixels stayed pale grey in a fast refresh - photo 2026-11-07),
-World arcs peak high like the film: per-missile lift 0.3-0.5 of length,
+World arcs peak high like the film: per-missile lift 0.5-0.8 of the
+east-west distance (full length made north-south routes hook back),
 peaks past the map edge squeezed into a band spread by lift (no stacking);
-arcs whose ends average south bow south (no southern cities yet). Salvos
+arcs whose ends average south bow south. Three made-up sides: WEST, EAST,
+SOUTH (Johannesburg, Caracas, Sydney launch; Kevin) plus southern targets
+(Sao Paulo, Buenos Aires, Lima, Cape Town, Perth, Auckland); ordinary
+salvos hit any non-US city of another side; north-south attacks OK (Kevin).
+Polar board drops track points south of its rim (None in the track list). Salvos
 avoid repeating an in-flight launch/target pair. Banner font_thin is
 DejaVu Sans ExtraLight 44 with make_bitmap_font --dilate (even 2 px:
 hinted 1 px strokes went pale in fast refreshes, looked thin/thick).

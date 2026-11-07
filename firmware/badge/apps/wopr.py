@@ -82,25 +82,42 @@ BIG_SALVO = (4, 8)     # missiles in a big salvo: DEFCON 2 or 1
 FLIGHT = (7, 12)       # updates per flight: ~20-35 min
 BLAST_STEPS = 2        # updates the blast rings stay after landing
 TRACK_POINTS = 48
-LIFT = (0.30, 0.50)    # arc height range (fraction of track length), per missile
+LIFT = (0.50, 0.80)    # arc height range (fraction of track length), per missile;
+                       # higher arcs, same flight time (Kevin, 2026-11-07)
 PREROLL = 9            # start mid-exchange, not with an empty board
 LESSON_X = 148         # left edge of the lesson text block (centres the longest line)
 
-# Launch sites / targets are just cities (lon, lat); two fictional sides.
+# Launch sites / targets are just cities (lon, lat) on three made-up sides.
 CITIES = {
     "SEATTLE": (-122.3, 47.6), "DENVER": (-105.0, 39.7), "CHICAGO": (-87.6, 41.9),
     "NEW YORK": (-74.0, 40.7), "LOS ANGELES": (-118.2, 34.1), "ANCHORAGE": (-149.9, 61.2),
     "LONDON": (-0.1, 51.5), "PARIS": (2.4, 48.9), "HONOLULU": (-157.9, 21.3),
     "MOSCOW": (37.6, 55.8), "MURMANSK": (33.1, 69.0), "NOVOSIBIRSK": (82.9, 55.0),
     "VLADIVOSTOK": (131.9, 43.1), "BEIJING": (116.4, 39.9), "BERLIN": (13.4, 52.5),
+    # third side (Kevin, 2026-11-07): South Africa, Venezuela, Australia
+    "JOHANNESBURG": (28.0, -26.2), "CARACAS": (-66.9, 10.5), "SYDNEY": (151.2, -33.9),
+    # southern-hemisphere targets only
+    "SAO PAULO": (-46.6, -23.5), "BUENOS AIRES": (-58.4, -34.6), "LIMA": (-77.0, -12.0),
+    "CAPE TOWN": (18.4, -33.9), "PERTH": (115.9, -31.95), "AUCKLAND": (174.8, -36.8),
 }
+SIDE_NAMES = ("WEST", "EAST", "SOUTH")
 SIDES = (("SEATTLE", "DENVER", "CHICAGO", "NEW YORK", "LOS ANGELES", "ANCHORAGE",
           "LONDON", "PARIS", "HONOLULU"),
-         ("MOSCOW", "MURMANSK", "NOVOSIBIRSK", "VLADIVOSTOK", "BEIJING", "BERLIN"))
+         ("MOSCOW", "MURMANSK", "NOVOSIBIRSK", "VLADIVOSTOK", "BEIJING", "BERLIN"),
+         ("JOHANNESBURG", "CARACAS", "SYDNEY"))
+SOUTH_TARGETS = ("SAO PAULO", "BUENOS AIRES", "LIMA", "CAPE TOWN", "PERTH", "AUCKLAND")
 USA = ("SEATTLE", "DENVER", "CHICAGO", "NEW YORK", "LOS ANGELES", "ANCHORAGE", "HONOLULU")
-# Ordinary exchanges stay off US cities, so DEFCON sits at 5 until a big
-# salvo comes in: targets per attacking side.
-TARGETS = (SIDES[1], ("LONDON", "PARIS"))
+# Ordinary exchanges: any city not on the attacker's side, but never US
+# cities, so DEFCON sits at 5 until a big salvo comes in.
+TARGETS = tuple(tuple(c for i, side in enumerate(SIDES) if i != a for c in side if c not in USA)
+                + SOUTH_TARGETS for a in range(len(SIDES)))
+
+
+def _side_name(city):
+    for i, side in enumerate(SIDES):
+        if city in side:
+            return SIDE_NAMES[i]
+    return "?"
 
 
 CLOSE_STEPS = 2        # a US-bound missile this many updates from impact is "close"
@@ -123,7 +140,11 @@ def _dotted(fb, pts, gap):
     e-paper; lone single pixels stayed pale grey in a fast refresh, Kevin
     2026-11-07); skips the date-line jump on the world board."""
     carry = 0.0
-    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+    for p0, p1 in zip(pts, pts[1:]):
+        if not (p0 and p1):         # beyond the polar board's rim
+            carry = 0.0
+            continue
+        (x0, y0), (x1, y1) = p0, p1
         dx, dy = x1 - x0, y1 - y0
         if abs(dx) > MAP_W // 2:
             continue
@@ -159,7 +180,7 @@ class World:
     @staticmethod
     def track(a, b, lift):
         """Ballistic-looking arc, high like the film's world screen: the
-        peak sits `lift` (0.3-0.5) of the track's length beyond the higher
+        peak sits `lift` (LIFT) of the east-west distance beyond the higher
         end - north, or south when the ends average south of the equator.
         Peaks that would leave the map are squeezed into a band near the
         edge, still spread by `lift`, so long arcs don't stack up there.
@@ -172,8 +193,10 @@ class World:
         y2 = MAP_Y + (90 - lat2) * MAP_H / 180
         if abs(x2 - x0) > MAP_W / 2:
             x2 += -MAP_W if x2 > x0 else MAP_W
-        d = ((x2 - x0) ** 2 + (y2 - y0) ** 2) ** 0.5
-        band = 12 + (LIFT[1] - lift) / (LIFT[1] - LIFT[0]) * 50   # px from the edge
+        # Height from the east-west distance: a north-south route with a
+        # big bulge overshot its target and hooked back.
+        d = abs(x2 - x0)
+        band = 6 + (LIFT[1] - lift) / (LIFT[1] - LIFT[0]) * 40    # px from the edge
         if lat0 + lat2 >= 0:
             peak = min(y0, y2) - lift * d
             limit = MAP_Y + band
@@ -226,8 +249,10 @@ class Polar:
             x = ka * v1[0] + kb * v2[0]
             y = ka * v1[1] + kb * v2[1]
             z = ka * v1[2] + kb * v2[2]
-            pts.append(Polar.xy(math.degrees(math.atan2(y, x)),
-                                math.degrees(math.asin(max(-1, min(1, z))))))
+            lat = math.degrees(math.asin(max(-1, min(1, z))))
+            # beyond the rim (south of POLAR_MIN_LAT): None, not drawn
+            pts.append(Polar.xy(math.degrees(math.atan2(y, x)), lat)
+                       if lat >= POLAR_MIN_LAT else None)
         return pts
 
 
@@ -387,7 +412,7 @@ class WoprApp(BaseApp):
                 self._big_salvo()
             else:
                 for _ in range(random.choice(SALVO_SIZES)):
-                    side = random.getrandbits(1)
+                    side = random.getrandbits(8) % len(SIDES)
                     self._launch(SIDES[side], TARGETS[side],
                                  random.getrandbits(8) % SALVO_EVERY)
         keep = []
@@ -451,27 +476,32 @@ class WoprApp(BaseApp):
                             fb.line(x0, y0, x1, y1, 1)
                             fb.line(x0, y0 + 1, x1, y1 + 1, 1)
                 else:               # bundle of three streaks over the pole
-                    (sx, sy), (ex, ey) = pts[0], pts[-1]
+                    seen = [p for p in pts if p] or [(0, 0), (1, 0)]  # all past the rim
+                    (sx, sy), (ex, ey) = seen[0], seen[-1]
                     length = ((ex - sx) ** 2 + (ey - sy) ** 2) ** 0.5 or 1
                     nx, ny = -(ey - sy) / length, (ex - sx) / length
                     for off in (-5, 0, 5):
                         ox, oy = int(nx * off), int(ny * off)
-                        for (x0, y0), (x1, y1) in zip(pts[:k - 1], pts[1:k]):
-                            fb.line(x0 + ox, y0 + oy, x1 + ox, y1 + oy, 1)
-                            fb.line(x0 + ox + 1, y0 + oy, x1 + ox + 1, y1 + oy, 1)
-                hx, hy = pts[k - 1]
+                        for p0, p1 in zip(pts[:k - 1], pts[1:k]):
+                            if p0 and p1:
+                                fb.line(p0[0] + ox, p0[1] + oy, p1[0] + ox, p1[1] + oy, 1)
+                                fb.line(p0[0] + ox + 1, p0[1] + oy, p1[0] + ox + 1, p1[1] + oy, 1)
                 _dotted(fb, pts[k - 1:], PATH_GAP)      # faint path to the target
-                _dotted_circle(fb, pts[-1][0], pts[-1][1], TARGET_R)
-                px, py = pts[k - 2]
-                if abs(hx - px) > MAP_W // 2:           # just crossed the date line
-                    px += MAP_W if hx > px else -MAP_W
-                _missile(fb, hx, hy, hx - px, hy - py)
-                lx, ly = pts[0]     # label at the launch point: doesn't move
-                bitfont.draw(font_mono, display._framebuffer_black, lx + 6, ly + 4, "%d" % m[4])
-                if age <= 1:
-                    _ring(lx, ly, 12)
-                flying.append((m[4], "WEST" if m[2] in SIDES[0] else "EAST"))
-            else:
+                if pts[-1]:
+                    _dotted_circle(fb, pts[-1][0], pts[-1][1], TARGET_R)
+                if pts[k - 1] and pts[k - 2]:
+                    hx, hy = pts[k - 1]
+                    px, py = pts[k - 2]
+                    if abs(hx - px) > MAP_W // 2:       # just crossed the date line
+                        px += MAP_W if hx > px else -MAP_W
+                    _missile(fb, hx, hy, hx - px, hy - py)
+                if pts[0]:          # label at the launch point: doesn't move
+                    lx, ly = pts[0]
+                    bitfont.draw(font_mono, display._framebuffer_black, lx + 6, ly + 4, "%d" % m[4])
+                    if age <= 1:
+                        _ring(lx, ly, 12)
+                flying.append((m[4], _side_name(m[2])))
+            elif pts[-1]:
                 x, y = pts[-1]
                 for r in range(8, 8 + 10 * (age - m[1]) + 1, 10):
                     _ring(x, y, r)
