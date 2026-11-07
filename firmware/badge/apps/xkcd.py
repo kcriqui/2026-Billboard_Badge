@@ -345,14 +345,26 @@ class XkcdApp(BaseApp):
         leds.write()
         try:
             log("wifi", wifi.connect())
+            shown = False
             for attempt in range(READ_TRIES):
                 info, png, requested = self._fetch()
                 last = attempt == READ_TRIES - 1
-                if self._show(info, png, check=not (requested or last)):
+                try:
+                    shown = self._show(info, png, check=not (requested or last))
+                except (ValueError, MemoryError) as ex:
+                    # A PNG variant fit_png can't decode: try another comic
+                    # rather than putting an error on the screen.
+                    log("skip #%d: can't decode: %r" % (info["num"], ex))
+                    png = None
+                    gc.collect()
+                    continue
+                if shown:
                     break
                 log("skip #%d: too small/busy to read on the badge" % info["num"])
                 png = None
                 gc.collect()
+            if not shown:
+                raise SkipComic("no comic could be shown in %d tries" % READ_TRIES)
             leds.fill((0, 0, 0))
             leds.write()
             self.next_update = time.time() + UPDATE_S

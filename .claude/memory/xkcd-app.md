@@ -16,7 +16,9 @@ the badge (no laptop needed) when the `Supercon` WiFi is in range.
   lost thin lines or filled bubble text. Kevin picked F over bicubic (D);
   F is also cheaper on the badge (2x2 vs 4x4 samples).
 - Skips JPEGs (early comics), >1.5 MB files, and comics that would shrink
-  below 60 %; comic 404 doesn't exist.
+  below 60 %; comic 404 doesn't exist. Any comic fit_png can't decode
+  (ValueError/MemoryError) is logged and skipped too, instead of an error
+  screen. 16-bit PNGs are supported (high byte kept; e.g. #134).
 - **Readability filter** (`fit_png.readability`, after drawing): skip if the
   median black stroke is < 3 px or >= 40 % of letter gaps are <= 3 px; up to
   3 tries, then show anyway; `xkcd_next` requests bypass it. Calibrated on 13

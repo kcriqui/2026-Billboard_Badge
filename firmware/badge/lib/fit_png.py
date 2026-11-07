@@ -274,7 +274,9 @@ def _read(data):
             break
     if ctype not in _CHANNELS:
         raise ValueError("png color type %d" % ctype)
-    if depth == 16 or (depth != 8 and ctype not in (0, 3)):
+    # 16-bit channels are fine: _rows() keeps the high byte of each sample.
+    if depth not in (1, 2, 4, 8, 16) or (depth == 16 and ctype == 3) \
+            or (depth < 8 and ctype not in (0, 3)):
         raise ValueError("png bit depth %d" % depth)
     return width, height, ctype, depth, palette, trns, idat
 
@@ -317,10 +319,10 @@ def draw_fit(data, black, red, box_x, box_y, box_w, box_h, threshold=170,
 
     lut = None
     if ctype in (0, 3):
-        lut = bytearray(1 << depth)
-        for s in range(1 << depth):
+        lut = bytearray(1 << min(depth, 8))
+        for s in range(1 << min(depth, 8)):
             if ctype == 0:
-                v = s * 255 // ((1 << depth) - 1)
+                v = s * 255 // ((1 << min(depth, 8)) - 1)
                 lut[s] = _kind(v, v, v, threshold)
             elif palette and s * 3 + 2 < len(palette):
                 lut[s] = _kind(palette[s * 3], palette[s * 3 + 1], palette[s * 3 + 2], threshold)
@@ -335,7 +337,7 @@ def draw_fit(data, black, red, box_x, box_y, box_w, box_h, threshold=170,
     for y, row in enumerate(_rows(idat, src_w, src_h, channels, depth)):
         out = kmv[y * src_w:(y + 1) * src_w]
         if lut is not None:
-            _classify_lut(row, lut, depth, src_w, out)
+            _classify_lut(row, lut, min(depth, 8), src_w, out)
         else:
             _classify_direct(row, channels, src_w, threshold, out)
     x0t, x1t, fxt = _bilinear_table(src_w, dst_w)
@@ -418,20 +420,35 @@ def _bilinear_row(kinds, row_a: int, row_b: int, fy: int, x0t, x1t, fxt,
             rd[byte] = rd[byte] | bit
 
 
+@micropython.viper
+def _high_bytes(src, dst, n: int):
+    """16-bit big-endian samples -> their high bytes (8-bit samples)."""
+    a = ptr8(src)
+    b = ptr8(dst)
+    for i in range(n):
+        b[i] = a[2 * i]
+
+
 def _rows(idat, src_w, src_h, channels, depth):
-    """Yield unfiltered raw rows (the same buffer pair is reused)."""
+    """Yield unfiltered raw rows (the same buffer pair is reused); 16-bit
+    images come out as 8-bit rows."""
     bpp = max(1, channels * depth // 8)
     row_bytes = (src_w * channels * depth + 7) // 8
     prev = bytearray(row_bytes)
     row = bytearray(row_bytes)
     head = bytearray(1)
+    row8 = bytearray(row_bytes // 2) if depth == 16 else None
     stream = deflate.DeflateIO(io.BytesIO(idat), deflate.ZLIB)
     try:
         for _ in range(src_h):
             _read_full(stream, head)
             _read_full(stream, row)
             _unfilter(head[0], row, prev, bpp)
-            yield row
+            if row8 is not None:
+                _high_bytes(row, row8, row_bytes // 2)
+                yield row8
+            else:
+                yield row
             prev, row = row, prev
     finally:
         stream.close()
@@ -442,10 +459,10 @@ def _draw_shrunk(src_w, src_h, ctype, depth, palette, trns, idat,
     channels = _CHANNELS[ctype]
     lut = None
     if ctype in (0, 3):
-        lut = bytearray(1 << depth)
-        for s in range(1 << depth):
+        lut = bytearray(1 << min(depth, 8))
+        for s in range(1 << min(depth, 8)):
             if ctype == 0:
-                v = s * 255 // ((1 << depth) - 1)
+                v = s * 255 // ((1 << min(depth, 8)) - 1)
                 lut[s] = _code(v, v, v)
             elif palette and s * 3 + 2 < len(palette):
                 lut[s] = _code(palette[s * 3], palette[s * 3 + 1], palette[s * 3 + 2])
@@ -470,7 +487,7 @@ def _draw_shrunk(src_w, src_h, ctype, depth, palette, trns, idat,
             rows = 0
         cur = dy
         if lut is not None:
-            _classify_lut(row, lut, depth, src_w, codes)
+            _classify_lut(row, lut, min(depth, 8), src_w, codes)
         else:
             _code_direct(row, channels, src_w, codes)
         _accumulate(codes, src_w, dst_w, sums, reds)
