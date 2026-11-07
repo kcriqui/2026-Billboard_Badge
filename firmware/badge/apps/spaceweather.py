@@ -21,6 +21,7 @@ the NOAA G-scale.
 
 import gc
 import json
+import os
 import time
 
 from apps.base_app import BaseApp
@@ -41,6 +42,24 @@ FAST_PASSES = 2
 RETRY_S = 60
 SWPC = "https://services.swpc.noaa.gov"
 PLANE_BYTES = plasma.W * plasma.H // 8
+LOG_PATH = "/data/spaceweather.log"
+LOG_MAX_BYTES = 8192
+
+
+def log(line):
+    """print() and append to /data/spaceweather.log (survives a reset;
+    the only record of updates while battery mode sleeps)."""
+    print("spaceweather:", line)
+    try:
+        try:
+            if os.stat(LOG_PATH)[6] > LOG_MAX_BYTES:
+                os.remove(LOG_PATH)
+        except OSError:
+            pass
+        with open(LOG_PATH, "a") as f:
+            f.write("%d %s\n" % (time.time(), line))
+    except OSError:
+        pass
 
 
 def _summary(path):
@@ -99,7 +118,7 @@ class SpaceWeatherApp(BaseApp):
         try:
             self._fetch()
         except Exception as ex:  # network hiccup: keep the old picture
-            print("spaceweather: update failed:", repr(ex))
+            log("update failed: %r" % (ex,))
             leds.fill((2, 0, 0))
             leds.write()
             self.next_update = time.time() + RETRY_S
@@ -124,8 +143,9 @@ class SpaceWeatherApp(BaseApp):
         plasma.layer(display._framebuffer_black, black_p, avoid=display._framebuffer_red)
         if self.caption:
             self._draw_caption()
-        print("spaceweather: %s, drew in %d ms, %s refresh" % (
-            self.wx, time.ticks_diff(time.ticks_ms(), t), "full" if full else "fast"))
+        log("Kp %s, wind %s, drew in %d ms, %s refresh" % (
+            self.wx.get("kp"), self.wx.get("speed"),
+            time.ticks_diff(time.ticks_ms(), t), "full" if full else "fast"))
         display.update(fast=not full, keep_red=not full,
                        passes=None if full else FAST_PASSES)
         self.next_update = time.time() + UPDATE_S
