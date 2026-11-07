@@ -5,6 +5,6 @@
 - [Badge gotchas](badge-gotchas.md) — LVGL re-init hang, USB freezes, requests crash, lost writes
 - [XKCD app](xkcd-app.md) — hybrid scaling (no dithering), WiFi file, log, xkcd_next
 - [Nametag](nametag.md) — name tag + photos (A/B), xkcd Script "Kevin", make_nametag/make_photo tools
-- [Earth app](earth-app.md) — ISS + quakes "long exposure" map, ghosting design, attribution rules, next ideas
+- [WOPR / Earth app](earth-app.md) — WarGames-style war room: made-up missiles, world/polar boards, DEFCON, ISS + quakes, ghosting, attribution
 - [Space Weather app](spaceweather-app.md) — dithered plasma driven by NOAA solar wind; layers, refresh, feeds
 - [OLED](oled.md) — #326 OLED on SAO I2C (0x3D) for menu/status/idle; dead rows from cracked corner

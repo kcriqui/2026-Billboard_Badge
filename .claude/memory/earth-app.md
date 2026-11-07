@@ -1,11 +1,29 @@
 ---
 name: earth-app
-description: Long Exposure Earth app — ISS track + quakes on a red world map, designed around e-paper ghosting; data sources and attribution rules
+description: WOPR app (was Long Exposure Earth) — WarGames-style war room with made-up missile tracks, world/polar boards, ISS + quakes, ghosting design, attribution
 metadata:
   type: project
 ---
 
-`apps/earth.py` ("Earth"), built 2026-11-06; Kevin: "looks good".
+**2026-11-07: renamed WOPR** (`apps/wopr.py`, menu name "WOPR"; Kevin: "call
+the app WOPR and remove the word simulation"). An homage to the WarGames
+war-room screens (reference: hp9845.net WarGames gallery, 35 frames: polar
+map with rings/spokes, USSR in red, streak bundles over the pole, dashed
+arcs on the world screen, thin vector banners, numbered tracks, status
+codes). Two boards alternate every 10 min (full refresh on switch): WORLD
+(dashed arcs, big "MISSILE WARNING"/"LAUNCH DETECTION" banner in
+`font_thin`) and POLAR (`data/earth/polar.png` from
+`tools/make_world_map.py --projection polar`, POLAR_* constants shared;
+streak bundles, track list). Missiles are made up, stored as city-to-city
+flights so tracks carry on across view changes; labels sit at launch points
+(moving labels smeared). DEFCON = missiles in flight to US cities (Kevin);
+ordinary salvos avoid US cities, a big salvo (1 in 10, 4-8 missiles) spikes
+it to 1-2; rising DEFCON forces a full refresh, falling waits. Simulated
+over a day: DEFCON 5 ~58 % of the time. Fonts `font_mono`, `font_mono_big`,
+`font_thin`; layout previews `tools/preview_earth_wopr.py`. Next idea:
+one side in red needs Natural Earth admin-0 countries (~0.8 MB; ask first).
+
+Original Long Exposure Earth (2026-11-06; Kevin: "looks good"):
 
 - Every 3 min: ISS position (wheretheiss.at, ~300 B) → dot; only the last
   orbit (31 dots) is drawn black, older ones are left out so the panel's

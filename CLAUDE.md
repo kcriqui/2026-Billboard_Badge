@@ -18,7 +18,7 @@
 - [badge-gotchas](.claude/memory/badge-gotchas.md) — known hangs/crashes and workarounds
 - [xkcd-app](.claude/memory/xkcd-app.md) — XKCD app design decisions
 - [nametag](.claude/memory/nametag.md) — name tag + photos, choices and regeneration
-- [earth-app](.claude/memory/earth-app.md) — Long Exposure Earth design, data sources, attribution
+- [earth-app](.claude/memory/earth-app.md) — WOPR (was Long Exposure Earth): war-room design, data sources, attribution
 - [spaceweather-app](.claude/memory/spaceweather-app.md) — dithered plasma driven by NOAA space weather
 - [oled](.claude/memory/oled.md) — SAO OLED: wiring, address, dead rows, plans
 

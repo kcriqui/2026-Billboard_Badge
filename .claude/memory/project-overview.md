@@ -21,7 +21,7 @@ Apps Kevin added (all on the badge and committed as of 2026-11-06; the Hello
 example and the stock Schedule app (Workshops/Sat/Sun Talks) were removed
 2026-11-06):
 XKCD with fast refresh ([[xkcd-app]]),
-handwritten Nametag with two photos ([[nametag]]), Long Exposure Earth
+handwritten Nametag with two photos ([[nametag]]), WOPR (was Long Exposure Earth)
 ([[earth-app]]) and Space Weather ([[spaceweather-app]]). Shared pieces:
 "reopen last app after restart" in the app switcher, an LED-bar refresh
 progress indicator for every app, a battery mode that sleeps between updates
