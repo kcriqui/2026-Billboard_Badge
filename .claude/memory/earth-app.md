@@ -33,8 +33,9 @@ SOUTH (Johannesburg, Caracas, Sydney launch; Kevin) plus southern targets
 salvos hit any non-US city of another side; north-south attacks OK (Kevin).
 Polar board drops track points south of its rim (None in the track list). Salvos
 avoid repeating an in-flight launch/target pair. Banner font_thin is
-DejaVu Sans ExtraLight 44 with make_bitmap_font --dilate (even 2 px:
-hinted 1 px strokes went pale in fast refreshes, looked thin/thick).
+DejaVu Sans ExtraLight 44 via make_bitmap_font --stroke 2: centreline
+(Zhang-Suen at 4x) redrawn with a 2x2 pen = exactly 2 px everywhere.
+Hinting gave 1 vs 2 px strokes, --dilate gave 2 vs 3 px (Kevin saw both).
 `tools/preview_wopr_app.py` renders the app's real drawing code on the
 laptop (framebuf stand-in) - use it for WOPR layout checks. DEFCON = missiles in flight to US cities (Kevin); 1 only when >=3 US-bound
 missiles are within 2 updates of impact (big salvos share a flight time,

@@ -54,3 +54,8 @@ metadata:
 - Menu timeout (2026-11-07): a menu opened from a running app closes after
   `MENU_TIMEOUT_MS` (10 s) without Menu +/-, back to that app un-relaunched
   (`lib/app_switcher.py`). The boot-time menu doesn't time out.
+
+- Bitmap fonts with even stroke width: `tools/make_bitmap_font.py --stroke N`
+  redraws glyphs as an N px pen along their centreline (vector-display look;
+  hinted thin fonts mix 1/2 px strokes, which also look uneven after fast
+  refreshes). Used for WOPR's banner `font_thin`.
