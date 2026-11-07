@@ -17,6 +17,8 @@ metadata:
   [[badge-gotchas]].
 - Inspect a running badge without breaking it: `mpremote connect $P resume exec "..."`
   (interrupts main.py but keeps LVGL state), then `mpremote reset` to restart.
+  Test scripts that `asyncio.run()` must call `asyncio.new_event_loop()`
+  first ([[badge-gotchas]]). Wait for any refresh to finish before interrupting.
 - Prefer having Kevin press buttons over driving apps via the REPL; read
   results afterwards from log files on flash (e.g. `/data/xkcd.log`).
 - Compile-check viper code: `mpy-cross -march=xtensawin -o /dev/null file.py`.

@@ -1,6 +1,6 @@
 ---
 name: nametag
-description: Kevin's handwritten "Hello I am" name tag — chosen font/size and how to regenerate it
+description: Kevin's Nametag app — handwritten "Hello I am" tag plus photos (incl. recursive one), choices and how to regenerate
 metadata:
   type: project
 ---
@@ -12,8 +12,8 @@ every PNG in `data/photos/`. Kevin asked for photos here rather than a
 separate Photo app (that app was removed).
 
 Kevin's choices (2026-11-06): text "Kevin"; handwriting, not a plain sans;
-xkcd Script, normal weight (not thickened); mixed case (all-caps Humor Sans and small-caps fakes
-were rejected); 116 px tall ("larger"; 86 px was picked first, then
+xkcd Script, normal weight (not thickened); mixed case (all-caps Humor Sans
+and small-caps fakes were rejected); 116 px tall ("larger"; 86 px was picked first, then
 Kevin asked for bigger).
 
 - Regenerate: `python3 tools/make_nametag.py Kevin [--height N] [--stroke N]`

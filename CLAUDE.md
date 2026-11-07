@@ -9,7 +9,7 @@
 - Installs: apt/Flatpak first (Kevin runs sudo). Ask before downloading files.
 
 ## Memory (read as needed) — `.claude/memory/`
-- [project-overview](.claude/memory/project-overview.md) — repos, remotes, what's built
+- [project-overview](.claude/memory/project-overview.md) — repos, remotes, what's built, upstream PR status
 - [working-with-kevin](.claude/memory/working-with-kevin.md) — collaboration preferences
 - [badge-hardware-firmware](.claude/memory/badge-hardware-firmware.md) — versions, fonts, refresh, power
 - [badge-dev-workflow](.claude/memory/badge-dev-workflow.md) — port, deploy, safe inspection, laptop previews

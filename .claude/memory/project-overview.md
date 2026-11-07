@@ -18,16 +18,23 @@ it off around the con.
   from design decisions; it is not a repo.
 
 Apps Kevin added (all on the badge and committed as of 2026-11-06):
-Hello (template example), XKCD ([[xkcd-app]]), handwritten Nametag with
-photos ([[nametag]]); plus "reopen last app after restart" in the app
-switcher and an LED-bar refresh progress indicator for every app.
+Hello (template example), XKCD with fast refresh ([[xkcd-app]]),
+handwritten Nametag with two photos ([[nametag]]); plus "reopen last app
+after restart" in the app switcher and an LED-bar refresh progress
+indicator for every app.
 
-Upstream PR #4 (trandi, faster epd.py) is merged into the fork as a real
-merge of its commit, with our changes on top: its LED-0 blinking removed in
-favour of our progress bar, and its `_reverse_fb_bits` toggling replaced
-(see [[badge-gotchas]]). When Hackaday merges #4 (or #3, which rewrites the
-same file), expect conflicts in `lib/epd.py` around `run()`; keep the
-progress bar hooks. No upstream PRs were merged as of 2026-11-06.
+Upstream status (2026-11-06): Hackaday merged PR #10 (boot-42 easter-egg
+fix), removed the PlatformIO drivers (`firmware/esp32s3-itc97*`), and added
+`user_apps/` — share apps by PR as a subdirectory there; the best may be
+baked into the firmware. All merged into the fork. Kevin's XKCD/Nametag
+apps could be submitted there (not done; his call).
+
+From open PRs, the fork carries: #4 (trandi, faster epd.py) as a real merge
+of its commit, with its LED-0 blinking replaced by our progress bar and its
+`_reverse_fb_bits` toggling removed ([[badge-gotchas]]); and only the
+fast-refresh parts of #3 (FacioErgoSum), ported by hand. When Hackaday merges
+#4 or #3, expect conflicts in `lib/epd.py` around `run()`/`global_update()`;
+keep the progress bar and fast-refresh hooks.
 
 Parked: wiring a GY-MAX4466 microphone (Kevin will solder it later). Plan:
 3.3 V + GND from an SAO port, OUT to an ADC1 pin (GPIO4/5 on SAO2 or the

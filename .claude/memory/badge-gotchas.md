@@ -8,7 +8,8 @@ metadata:
 - **LVGL twice = hang.** A soft reset followed by importing `lib.epd` (which
   calls `lvgl.display_create` again) hangs the badge. Only RESET recovers.
   Never `mpremote run`/`exec` display code after a soft reset; hard-reset first
-  or use `resume`.
+  or use `resume`. PR #4 added an `lvgl.deinit()` guard (the badge's LVGL has
+  `is_initialized`/`deinit`), but whether it cures the hang is untested.
 - **USB freezes, badge keeps running.** Several times the USB serial link died
   ("broken pipe" / I/O error on the port) while apps and buttons kept working.
   Only RESET (or replug) fixes it. Cause not pinned down; not caused by our

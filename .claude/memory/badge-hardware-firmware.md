@@ -12,14 +12,14 @@ metadata:
   are built in.
 - LVGL fonts actually compiled in: montserrat 14, 16, 24, 28, 32, 36, 40, 44, 48.
   The repo's lv_conf.h lists more (e.g. 18) but they are NOT in the build.
-- Display refresh in MicroPython is the panel's slow full waveform only.
+- Full refresh = the panel's own (OTP) waveform, ~35 s of it physical.
   Measured 2026-11-06 (same image, before → after merging upstream PR #4,
   which uses hardware SPI + viper): LVGL 960x120 text 2657 → 105 ms,
   split/bit-reverse/SPI send ~5.3 s → ~0.4 s, panel waveform ~34.9 s both
   (physics), update() to done 44.5 → 36.5 s. PNG decode (large_png, 3-9 s,
   varies) is untouched by #4.
-- Fast refresh: `display.update(fast=True[, keep_red=True, passes=N])`, ported
-  from upstream PR #3 (only its epd.py fast-refresh parts). Short waveform
+- Fast refresh (~5 s): `display.update(fast=True[, keep_red=True, passes=N])`,
+  ported from upstream PR #3 (only its epd.py fast-refresh parts). Short waveform
   from `data/rendered_luts.py` written to 0xB0, re-triggered 3x on driver B.
   Black/white only (red goes pale), ghosting builds up. Kevin found it "fast
   and clean". Kill switch: create `/data/no_fast_refresh` on the badge (checked
