@@ -7,6 +7,8 @@
 - Never commit `firmware/badge/data/wifi.json` or `tools/fonts/`; never handle the WiFi password.
 - Show visual options as side-by-side previews and let Kevin choose before deploying.
 - Installs: apt/Flatpak first (Kevin runs sudo). Ask before downloading files.
+- Credit third-party data/fonts/code in the app and the README Credits section.
+- Other sessions may share this checkout: stage files by name, check `git status` before `dev.sh push`.
 
 ## Memory (read as needed) — `.claude/memory/`
 - [project-overview](.claude/memory/project-overview.md) — repos, remotes, what's built, upstream PR status

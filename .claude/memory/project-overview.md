@@ -19,12 +19,17 @@ it off around the con.
 
 Apps Kevin added (all on the badge and committed as of 2026-11-06):
 Hello (template example), XKCD with fast refresh ([[xkcd-app]]),
-handwritten Nametag with two photos ([[nametag]]); plus "reopen last app
-after restart" in the app switcher, an LED-bar refresh progress
-indicator for every app, and a battery mode that sleeps between updates
-for any app ([[badge-hardware-firmware]]).
+handwritten Nametag with two photos ([[nametag]]), Long Exposure Earth
+([[earth-app]]) and Space Weather ([[spaceweather-app]]). Shared pieces:
+"reopen last app after restart" in the app switcher, an LED-bar refresh
+progress indicator for every app, a battery mode that sleeps between updates
+for any app, crisp 1-bit bitmap fonts (`lib/bitfont`, made in a parallel
+session) and a shared HTTPS helper `lib/net.py` ([[badge-hardware-firmware]]).
+Still to build from the ideas list: #4 sky clock (moon/sun/planets computed
+on the badge), the mic seismograph once the mic is soldered, a QR code in
+Nametag, "Now & Next" schedule, sharing apps via upstream `user_apps/`.
 
-Upstream status (2026-11-06): Hackaday merged PR #10 (boot-42 easter-egg
+Upstream status (checked 2026-11-06 evening; 12 PRs open): Hackaday merged PR #10 (boot-42 easter-egg
 fix), removed the PlatformIO drivers (`firmware/esp32s3-itc97*`), and added
 `user_apps/` — share apps by PR as a subdirectory there; the best may be
 baked into the firmware. All merged into the fork. Kevin's XKCD/Nametag

@@ -17,3 +17,10 @@ metadata:
   on the laptop.
 - Software installs: apt/Flatpak first; give Kevin sudo commands to run.
   Ask before downloading anything (state file, source, size, licence).
+- Credit third-party data, fonts and code: Kevin asked to "attribute our
+  code to using it" (Natural Earth). Put credits in the app docstring, on
+  screen where there's room, and in the README "Credits (Kevin's fork)".
+- Kevin enjoys data-driven generative art that plays to e-paper quirks
+  (ghosting, slow/fast refresh). He iterates on looks: expect "more
+  contrast", "no solid colours" style follow-ups — keep tuning numbers in
+  one place and preview at 100 % size.

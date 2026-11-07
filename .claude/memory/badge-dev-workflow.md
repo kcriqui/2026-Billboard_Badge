@@ -25,9 +25,15 @@ metadata:
 - Prefer having Kevin press buttons over driving apps via the REPL; read
   results afterwards from log files on flash (e.g. `/data/xkcd.log`).
 - Compile-check viper code: `mpy-cross -march=xtensawin -o /dev/null file.py`.
-- Laptop preview of image conversion: run `lib/fit_png.py` under CPython with
-  stubs for `micropython.viper`, `ptr8`, `ptr32` (memoryview cast "I") and
-  `deflate` (zlib), then render the framebuffers with Pillow.
+- Laptop previews run the badge's own code under CPython with stubs:
+  `micropython.viper` → identity, `ptr8` → the buffer, `ptr16`/`ptr32` →
+  the array itself or `memoryview(b).cast("H"/"I")`, `deflate` → zlib; then
+  render the framebuffers with Pillow (fit_png, plasma, bitfont all work).
+- **Shared checkout:** another Claude session may edit this repo at the same
+  time (2026-11-06: the bitmap-font work). Stage files by name, never
+  `git add -A`; `./dev.sh push` syncs *everything* in `firmware/badge/`,
+  including others' uncommitted work, so check `git status` first and
+  coordinate via cross-session messages.
 - Editor: Pylance uses `pyrightconfig.json` + stubs in `typings/`
   (not committed; reinstall with `./dev.sh stubs`).
 - `firmware/badge-backup/` (not committed) has the badge's original data files.

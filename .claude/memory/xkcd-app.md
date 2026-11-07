@@ -27,6 +27,8 @@ the badge (no laptop needed) when the `Supercon` WiFi is in range.
   "busyness" score did NOT separate them (#2553 readable at the same score as
   #1688). The log prints stroke/tight-gap for every comic, to retune.
 - Own HTTPS client in `apps/xkcd.py` — see [[badge-gotchas]] (requests crash).
+  Newer apps use the shared copy in `lib/net.py`; XKCD keeps its own because
+  it raises SkipComic.
 - WiFi credentials: `firmware/badge/data/wifi.json` (gitignored; Kevin writes
   it — never handle the password). Template: `wifi.json.example`.
 - Debug log on flash: `/data/xkcd.log` (fresh per launch, capped at 8 KB).

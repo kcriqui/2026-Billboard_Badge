@@ -1,7 +1,7 @@
 - [Project overview](project-overview.md) — repos, remotes, what's built, upstream PR status, parked mic idea
-- [Working with Kevin](working-with-kevin.md) — previews before choices, Kevin tests on hardware, push often
+- [Working with Kevin](working-with-kevin.md) — previews before choices, tests on hardware, push often, credit sources, generative art
 - [Badge hardware & firmware](badge-hardware-firmware.md) — MicroPython 1.24.1/LVGL 9.3, real font list, full/fast refresh timings, LED overlay, power
-- [Badge dev workflow](badge-dev-workflow.md) — badge port, dev.sh push, safe REPL inspection, laptop previews
+- [Badge dev workflow](badge-dev-workflow.md) — badge port, dev.sh push, safe REPL inspection, laptop previews, shared checkout
 - [Badge gotchas](badge-gotchas.md) — LVGL re-init hang, USB freezes, requests crash, lost writes
 - [XKCD app](xkcd-app.md) — hybrid scaling (no dithering), WiFi file, log, xkcd_next
 - [Nametag](nametag.md) — name tag + photos (A/B), xkcd Script "Kevin", make_nametag/make_photo tools
