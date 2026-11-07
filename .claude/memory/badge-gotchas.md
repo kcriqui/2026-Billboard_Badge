@@ -43,3 +43,7 @@ metadata:
   same network was fine and WiFi power-save made no difference. Fix: the
   badge now joins in 802.11b/g only (`lib/wifi.py`, `protocol=MODE_11B|MODE_11G`).
   If downloads stall somewhere new, check that first.
+
+- **Fast refresh doesn't darken lone single pixels** (WOPR's 1-px dotted
+  paths came out pale grey or invisible, 2026-11-07). Use 2x2 dots or
+  thicker for anything that must show after a fast black-only refresh.

@@ -22,7 +22,9 @@ over the map with the quick refresh (Kevin: not a full-screen flash);
 `font_mono_huge` (DejaVu Sans Mono Bold 46). B to lesson takes ~30-40 min. Missiles are made up, stored as city-to-city
 flights so tracks carry on across view changes; labels sit at launch points
 (moving labels smeared). Heads are rotated missile shapes; a faint dotted
-path runs from each head to a dotted circle at its target.
+path runs from each head to a dotted circle at its target. Dots are 2x2
+(lone single pixels stayed pale grey in a fast refresh - photo 2026-11-07),
+and world arcs bulge d/6 (d/4 ran along the top edge through the Arctic).
 `tools/preview_wopr_app.py` renders the app's real drawing code on the
 laptop (framebuf stand-in) - use it for WOPR layout checks. DEFCON = missiles in flight to US cities (Kevin); 1 only when >=3 US-bound
 missiles are within 2 updates of impact (big salvos share a flight time,

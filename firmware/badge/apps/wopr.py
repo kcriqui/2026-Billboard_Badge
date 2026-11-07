@@ -104,7 +104,8 @@ TARGETS = (SIDES[1], ("LONDON", "PARIS"))
 
 CLOSE_STEPS = 2        # a US-bound missile this many updates from impact is "close"
 CLOSE_FOR_1 = 3        # DEFCON 1 only when at least this many are close
-PATH_GAP = 7           # px between the dots of the faint path to the target
+PATH_GAP = 10          # px between the dots of the faint path to the target
+DOT = 2                # dot size: single pixels didn't darken in a fast refresh
 TARGET_R = 11          # faint dotted circle round each target
 
 
@@ -117,8 +118,9 @@ def _defcon(incoming, close):
 
 
 def _dotted(fb, pts, gap):
-    """Single-pixel dots every `gap` px along a polyline (a faint line on
-    e-paper); skips the date-line jump on the world board."""
+    """DOT x DOT dots every `gap` px along a polyline (a faint line on
+    e-paper; lone single pixels stayed pale grey in a fast refresh, Kevin
+    2026-11-07); skips the date-line jump on the world board."""
     carry = 0.0
     for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
         dx, dy = x1 - x0, y1 - y0
@@ -128,15 +130,15 @@ def _dotted(fb, pts, gap):
         d = carry
         while d < seg:
             f = d / seg
-            fb.pixel(int(x0 + dx * f), int(y0 + dy * f), 1)
+            fb.fill_rect(int(x0 + dx * f), int(y0 + dy * f), DOT, DOT, 1)
             d += gap
         carry = d - seg
 
 
 def _dotted_circle(fb, x, y, r):
-    for k in range(0, 360, 20):
+    for k in range(0, 360, 30):
         a = math.radians(k)
-        fb.pixel(x + int(r * math.cos(a)), y + int(r * math.sin(a)), 1)
+        fb.fill_rect(x + int(r * math.cos(a)), y + int(r * math.sin(a)), DOT, DOT, 1)
 
 
 # ---- the two boards -----------------------------------------------------------
@@ -155,8 +157,9 @@ class World:
 
     @staticmethod
     def track(a, b):
-        """Ballistic-looking arc bulging north by a quarter of its length;
-        the short way across the date line."""
+        """Ballistic-looking arc bulging north by a sixth of its length (a
+        quarter hit the top edge and ran through the Arctic clutter); the
+        short way across the date line."""
         lon0, lat0 = CITIES[a]
         lon2, lat2 = CITIES[b]
         x0 = (lon0 + 180) * MAP_W / 360
@@ -167,7 +170,7 @@ class World:
             x2 += -MAP_W if x2 > x0 else MAP_W
         d = ((x2 - x0) ** 2 + (y2 - y0) ** 2) ** 0.5
         cx = (x0 + x2) / 2
-        cy = max(min(y0, y2) - d / 4, MAP_Y + 30)
+        cy = max(min(y0, y2) - d / 6, MAP_Y + 40)
         pts = []
         for i in range(TRACK_POINTS + 1):
             t = i / TRACK_POINTS
