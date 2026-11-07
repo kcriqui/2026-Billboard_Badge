@@ -16,8 +16,10 @@ metadata:
   (push overwrites the badge's copy). It holds a list; the badge tries the
   ones in range. `python3 tools/add_wifi.py [conn names]` merges networks
   saved in NetworkManager without printing passwords. 2026-11-06: Kevin
-  OK'd taking them from the laptop, then trimmed the list himself to 6
-  (home, mom's, Supercon...). Don't re-add the ones he removed.
+  OK'd taking them from the laptop, then trimmed the list himself (7 networks
+  on 2026-11-07, incl. ACCD he added by hand). Don't re-add ones he removed.
+  Validate the JSON before pushing: a hand edit once left an entry after the
+  closing `]`, which would have stopped WiFi entirely.
 - No OTA: Kevin tried WiFi push and GitHub-pull OTA (2026-11-06) and chose
   USB-only updates. Don't re-propose OTA.
 - After any `mpremote` command that soft-resets (cp, exec without `resume`),
