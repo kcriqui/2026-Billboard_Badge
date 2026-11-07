@@ -19,10 +19,8 @@ import gc
 import json
 import time
 
-import lvgl
-
 from apps.base_app import BaseApp
-from lib import net, wifi
+from lib import bitfont, font_big, font_small, net, wifi
 from lib.button import UserA, UserB
 from lib.epd import display, display_height, display_width
 from lib.led_bar import leds
@@ -40,9 +38,6 @@ MAP_PATH = "/data/earth/world.png"
 MAP_Y, MAP_W, MAP_H = 96, 960, 480
 ROW_BYTES = display_width // 8
 UNIX_TO_MP_EPOCH = 946684800  # MicroPython's time counts from 2000-01-01
-
-_BLACK = lvgl.color_hex(0x000000)
-_WHITE = lvgl.color_hex(0xFFFFFF)
 
 
 def _xy(lon, lat):
@@ -67,7 +62,6 @@ class EarthApp(BaseApp):
         self.seen_big = set()
         self.iss = None
         self._map = None
-        self._ui = None
 
     # ---- data ---------------------------------------------------------------
 
@@ -123,42 +117,16 @@ class EarthApp(BaseApp):
             _mark(x, y, 9)
             _mark(x, y, 8)
 
-    def _ensure_ui(self):
-        if self._ui:
-            return
-        scr = lvgl.obj()
-        scr.remove_style_all()
-        scr.set_style_bg_opa(lvgl.OPA.TRANSP, 0)
-        boxes = []
-        for top, h in ((0, MAP_Y), (MAP_Y + MAP_H, display_height - MAP_Y - MAP_H)):
-            box = lvgl.obj(scr)
-            box.remove_style_all()
-            box.set_pos(0, top)
-            box.set_size(display_width, h)
-            box.set_style_bg_color(_WHITE, 0)
-            box.set_style_bg_opa(lvgl.OPA.COVER, 0)
-            boxes.append(box)
-        title = lvgl.label(boxes[0])
-        title.set_pos(10, 6)
-        title.set_text("LONG EXPOSURE EARTH")
-        title.set_style_text_font(lvgl.font_montserrat_28, 0)
-        title.set_style_text_color(_BLACK, 0)
-        sub = lvgl.label(boxes[0])
-        sub.set_pos(10, 46)
-        sub.set_style_text_font(lvgl.font_montserrat_16, 0)
-        sub.set_style_text_color(_BLACK, 0)
-        foot = lvgl.label(boxes[1])
-        foot.set_pos(10, 8)
-        foot.set_width(display_width - 20)
-        foot.set_style_text_font(lvgl.font_montserrat_16, 0)
-        foot.set_style_text_color(_BLACK, 0)
-        self._ui = (scr, boxes, sub, foot)
-
     def _draw_text(self):
-        self._ensure_ui()
-        scr, boxes, sub, foot = self._ui
+        """Header and footer in crisp 1-bit bitmap fonts (lib/bitfont), drawn
+        straight into the black plane; those bands hold no red."""
+        black = display._framebuffer_black
         t = time.gmtime(self.iss["timestamp"] - UNIX_TO_MP_EPOCH)
-        sub.set_text("%04d-%02d-%02d %02d:%02d UTC    ISS over the last orbit  +  earthquakes M2.5+, past 24 h"
+        y = 6
+        bitfont.draw(font_big, black, 10, y, "LONG EXPOSURE EARTH")
+        y += font_big.HEIGHT + 6
+        bitfont.draw(font_small, black, 10, y,
+                     "%04d-%02d-%02d %02d:%02d UTC    ISS over the last orbit  +  earthquakes M2.5+, past 24 h"
                      % (t[0], t[1], t[2], t[3], t[4]))
         lines = []
         if self.quakes:
@@ -167,13 +135,8 @@ class EarthApp(BaseApp):
         lines.append("ISS lat %.1f, lon %.1f   altitude %.0f km   %.0f km/h" % (
             self.iss["latitude"], self.iss["longitude"], self.iss["altitude"], self.iss["velocity"]))
         lines.append("Map: Natural Earth (naturalearthdata.com)   Data: wheretheiss.at, USGS")
-        foot.set_text("\n".join(lines))
-        lvgl.screen_load(scr)
-        scr.update_layout()
-        display.lv_display.inv_p = 0
-        for box in boxes:
-            box.invalidate()
-        lvgl.refr_now(display.lv_display)
+        bitfont.draw_lines(font_small, black, lines, 10, MAP_Y + MAP_H + 8,
+                           display_width - 20, max_lines=3)
 
     # ---- app loop -------------------------------------------------------------
 

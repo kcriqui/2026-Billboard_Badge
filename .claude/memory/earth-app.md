@@ -19,6 +19,8 @@ metadata:
   (Kevin chose outlines over filled land: black marks stay readable and fade
   evenly). Decoded once, then copied from a RAM cache each frame.
 - Marks clear red under them: black+red on one pixel = undriven table.
+- Text (title, UTC time, footer) uses the 1-bit bitmap fonts (`lib/bitfont`,
+  `font_big` / `font_small`), not LVGL — Kevin wants crisp fonts in all apps.
 - **Attribution is required** (Kevin asked): Natural Earth credit in the app
   docstring, on-screen footer, tools/make_world_map.py and README credits.
   Raw `ne_110m_land.geojson` lives in gitignored `tools/data/` (download
