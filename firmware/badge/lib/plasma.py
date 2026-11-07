@@ -97,9 +97,12 @@ def from_weather(wx, step):
     kp = min(max(wx.get("kp") or 1, 0), 9)
     storm = (wx.get("g") or 0) >= 1 or kp >= 5
     south = max(0, -bz)
-    # red: deep, slow, broad; amount from Kp
-    r_span = 480 + kp * 15 + (60 if storm else 0)         # 480..675
-    red = params(5, 6, 3, 4, 40, 90, 160, 220, -230, r_span, 3, 5)
+    # red: deep, slow, broad; amount from Kp. Steep tone curve (span 2200)
+    # so red is solid inside each blob with a dithered fading rim: solid red
+    # survives fast black-only refreshes, isolated dithered red dots fade
+    # (Kevin's option C, 2026-11-06). lo sets coverage: ~24 % at Kp 2.7.
+    r_lo = -1330 + kp * 20 + (80 if storm else 0)
+    red = params(5, 6, 3, 4, 40, 90, 160, 220, r_lo, 2200, 3, 5)
     # black: surface; waviness from southward Bz, density from Bt, drift from speed
     freq = 9 + int(south / 2) + int(kp)                   # 9..~40
     drift = int(4 + (speed - 250) / 30)                   # table steps per update

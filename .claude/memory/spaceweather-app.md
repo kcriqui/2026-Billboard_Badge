@@ -33,9 +33,11 @@ metadata:
   0x99 shake, black a hard drive) disturb the isolated dithered red dots;
   3 pulses per update triple it. Fix in use (Kevin chose "A + test B"):
   full refresh after every `FAST_IN_A_ROW = 4` fast ones (~15 min) and
-  `FAST_PASSES = 2`. If still fading: more full refreshes, or option C
-  (solid red areas, dither only black/white). Earth's thin red coastlines
-  may show the same effect.
+  `FAST_PASSES = 2` — "a little better". Then option C, Kevin's variant:
+  red as **solid blobs with dithered fading rims** (red span 2200, lo
+  -1330 + 20*Kp; calm ~21 % red, storm ~43 %); black/white stay dithered.
+  Solid cores should resist fading; judge on the panel, then maybe relax
+  the 15-min top-up. Earth's thin red coastlines may fade the same way.
 - Small caption (bitmap `font_small`) with the numbers + "data: NOAA SWPC";
   User B toggles it (forces a full refresh). User A = update now.
 - Feeds: `/products/summary/solar-wind-speed.json` and `-mag-field.json`
