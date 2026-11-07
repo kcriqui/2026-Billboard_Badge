@@ -320,7 +320,7 @@ class XkcdApp(BaseApp):
             return False
         png = None
         gc.collect()
-        title = "#%d: %s" % (info["num"], info.get("safe_title") or info.get("title", ""))
+        title = "xkcd #%d: %s" % (info["num"], info.get("safe_title") or info.get("title", ""))
         t = time.ticks_ms()
         self._render_text(title, info.get("alt"), y + h + MARGIN)
         has_red = max(display._framebuffer_red) != 0
