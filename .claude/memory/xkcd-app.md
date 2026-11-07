@@ -50,3 +50,9 @@ the badge (no laptop needed) when the `Supercon` WiFi is in range.
   the panel: ~36 s full (measured), ~5 s fast (Kevin confirmed on the badge,
   not instrumented). Buttons are unresponsive during download/convert.
 - Possible follow-up: switch WiFi off between updates if battery life is poor.
+
+Licence credit (2026-11-07): xkcd is CC BY-NC 2.5 (Randall Munroe). Header
+reads "xkcd #N: Title" (LVGL, one line, ends "..." when too long) with a
+two-line credit right-justified at the top right in font_small:
+"xkcd.com/N" / "Randall Munroe, CC BY-NC 2.5" (Kevin picked this over a
+one-line version from side-by-side previews). Settings `CREDIT`, `CREDIT_GAP`.

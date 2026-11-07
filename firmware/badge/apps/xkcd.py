@@ -21,7 +21,7 @@ import ssl
 import lvgl
 
 from apps.base_app import BaseApp
-from lib import bitfont, fit_png, font_alt, wifi
+from lib import bitfont, fit_png, font_alt, font_small, wifi
 from lib.button import UserA, UserB
 from lib.epd import display, display_height, display_width
 from lib.led_bar import leds
@@ -49,6 +49,10 @@ TRIES = 6  # random picks per update before giving up
 HEADER_H = 44
 FOOTER_MIN_H = 40  # only show alt text if at least this much room is left
 MARGIN = 6
+# Licence credit, two lines right-justified in the header (Kevin's option B,
+# 2026-11-07). xkcd is CC BY-NC 2.5, Randall Munroe.
+CREDIT = ("xkcd.com/%d", "Randall Munroe, CC BY-NC 2.5")
+CREDIT_GAP = 16  # between the (truncated) title and the credit
 USER_AGENT = b"BillboardBadge-xkcd/1.0 (MicroPython)"
 
 _WHITE = lvgl.color_hex(0xFFFFFF)
@@ -237,14 +241,17 @@ class XkcdApp(BaseApp):
         header.set_style_bg_opa(lvgl.OPA.COVER, 0)
         title = lvgl.label(header)
         title.set_width(display_width - 2 * MARGIN)
+        title.set_height(HEADER_H - 8)
+        title.set_long_mode(lvgl.label.LONG_MODE.DOTS)  # one line, ends "..."
         title.set_pos(MARGIN, 6)
         title.set_style_text_font(lvgl.font_montserrat_28, 0)
         title.set_style_text_color(_BLACK, 0)
 
         self._scr, self._header, self._title = scr, header, title
 
-    def _render_text(self, title, alt=None, alt_top=0):
-        """Draw the alt text (below alt_top) and the title.
+    def _render_text(self, title, alt=None, alt_top=0, credit=None):
+        """Draw the alt text (below alt_top), the title and, if given, the
+        credit lines right-justified at the top right.
 
         The alt text uses the 1-bit bitmap font (lib/font_alt.py, DejaVu Sans
         15 px rendered on the laptop), drawn straight into the framebuffer:
@@ -262,12 +269,21 @@ class XkcdApp(BaseApp):
             bitfont.draw_lines(font_alt, display._framebuffer_black, lines,
                                MARGIN, alt_top + 2, w, max_lines)
         self._ensure_screen()
+        credit_w = max(bitfont.width(font_small, l) for l in credit) if credit else 0
+        self._title.set_width(display_width - 2 * MARGIN
+                              - (credit_w + CREDIT_GAP if credit else 0))
         self._title.set_text(title)
         lvgl.screen_load(self._scr)
         self._scr.update_layout()
         display.lv_display.inv_p = 0  # drop the full-screen invalidation
         self._header.invalidate()
         lvgl.refr_now(display.lv_display)
+        if credit:  # after LVGL, which paints the header white
+            step = font_small.HEIGHT + 2
+            y = (HEADER_H - (len(credit) * step - 2)) // 2
+            for i, line in enumerate(credit):
+                x = display_width - MARGIN - bitfont.width(font_small, line)
+                bitfont.draw(font_small, display._framebuffer_black, x, y + i * step, line)
 
     def _message(self, title, text):
         """Full-screen text, used for errors before any comic is shown."""
@@ -322,7 +338,8 @@ class XkcdApp(BaseApp):
         gc.collect()
         title = "xkcd #%d: %s" % (info["num"], info.get("safe_title") or info.get("title", ""))
         t = time.ticks_ms()
-        self._render_text(title, info.get("alt"), y + h + MARGIN)
+        credit = (CREDIT[0] % info["num"], CREDIT[1])
+        self._render_text(title, info.get("alt"), y + h + MARGIN, credit)
         has_red = max(display._framebuffer_red) != 0
         fast = (USE_FAST_REFRESH and not self.launched and not has_red
                 and not self._prev_had_red and self._fast_in_a_row < FAST_IN_A_ROW)
