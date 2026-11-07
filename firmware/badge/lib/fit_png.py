@@ -11,15 +11,18 @@ Each source pixel is sorted into white, black or red:
   - anything else                              -> white
 A threshold above the usual 128 keeps anti-aliased line art from thinning out.
 Two scaling paths:
-  - enlarging (most XKCD comics): each source pixel is sorted as above and
-    copied to the screen pixels it covers (nearest neighbour). This keeps
-    small white text inside black shapes readable.
+  - enlarging (most XKCD comics): each source pixel is sorted as above, then
+    the black/white result is enlarged with bilinear interpolation and cut at
+    `grow_cut` (150, i.e. a bit bold). Cutting first keeps thin lines; the
+    smooth enlarge gives evenly stepped tilted lines and an even line weight
+    (nearest neighbour made them lumpy at odd scales like 1.28x).
   - shrinking: every screen pixel averages the source pixels it covers and
     turns black if that average is below `shrink_threshold` (default 200,
     i.e. bold). Plain thresholding or dithering breaks thin strokes apart;
     averaging then cutting high keeps text solid.
 """
 
+import array
 import gc
 import io
 
@@ -136,36 +139,6 @@ def _classify_direct(row, channels: int, width: int, threshold: int, out):
             if channels == 4 and src[i + 3] < 128:
                 k = _WHITE
         dst[x] = k
-
-
-@micropython.viper
-def _blit(kinds, src_w: int, dst_w: int, dst_x: int, dy0: int, dy1: int, black, red):
-    """Draw one classified source row onto display rows dy0..dy1-1."""
-    k = ptr8(kinds)
-    bk = ptr8(black)
-    rd = ptr8(red)
-    dy = dy0
-    while dy < dy1:
-        base = dy * SCREEN_WIDTH + dst_x
-        for x in range(src_w):
-            kind = k[x]
-            if kind == _WHITE:
-                continue
-            x0 = x * dst_w // src_w
-            x1 = (x + 1) * dst_w // src_w
-            if x1 <= x0:
-                x1 = x0 + 1
-            while x0 < x1:
-                i = base + x0
-                byte = i >> 3
-                bit = 128 >> (i & 7)
-                if kind == _BLACK:
-                    bk[byte] = bk[byte] | bit
-                    rd[byte] = rd[byte] & (255 ^ bit)
-                elif (bk[byte] & bit) == 0:
-                    rd[byte] = rd[byte] | bit
-                x0 += 1
-        dy += 1
 
 
 # ---- shrink path: average the source pixels behind each screen pixel ----
@@ -323,7 +296,7 @@ def png_size(data):
 
 
 def draw_fit(data, black, red, box_x, box_y, box_w, box_h, threshold=170,
-             max_scale=3, shrink_threshold=200):
+             max_scale=3, shrink_threshold=200, grow_cut=150):
     """Decode PNG bytes into the framebuffers, centred in the box.
 
     The box must already be white. Returns (x, y, w, h) of the drawn image.
@@ -354,30 +327,95 @@ def draw_fit(data, black, red, box_x, box_y, box_w, box_h, threshold=170,
                 if trns and s < len(trns) and trns[s] < 128:
                     lut[s] = _WHITE
 
-    kinds = bytearray(src_w)
-    prev = bytearray(row_bytes)
-    row = bytearray(row_bytes)
-    head = bytearray(1)
+    # Classify the whole comic first (enlarged comics are at most ~948x616
+    # source pixels, so this is < 600 KB), then enlarge it in one pass.
+    kinds = bytearray(src_w * src_h)
+    kmv = memoryview(kinds)
     gc.collect()
-    stream = deflate.DeflateIO(io.BytesIO(idat), deflate.ZLIB)
-    try:
-        for y in range(src_h):
-            _read_full(stream, head)
-            _read_full(stream, row)
-            _unfilter(head[0], row, prev, bpp)
-            if lut is not None:
-                _classify_lut(row, lut, depth, src_w, kinds)
-            else:
-                _classify_direct(row, channels, src_w, threshold, kinds)
-            dy0 = dst_y + y * dst_h // src_h
-            dy1 = dst_y + (y + 1) * dst_h // src_h
-            if dy1 <= dy0:
-                dy1 = dy0 + 1
-            _blit(kinds, src_w, dst_w, dst_x, dy0, dy1, black, red)
-            prev, row = row, prev
-    finally:
-        stream.close()
+    for y, row in enumerate(_rows(idat, src_w, src_h, channels, depth)):
+        out = kmv[y * src_w:(y + 1) * src_w]
+        if lut is not None:
+            _classify_lut(row, lut, depth, src_w, out)
+        else:
+            _classify_direct(row, channels, src_w, threshold, out)
+    x0t, x1t, fxt = _bilinear_table(src_w, dst_w)
+    y0t, y1t, fyt = _bilinear_table(src_h, dst_h)
+    # Black where the interpolated darkness beats the cut (gray < grow_cut).
+    cut = (255 - grow_cut) * 65536 // 255
+    for dy in range(dst_h):
+        _bilinear_row(kinds, y0t[dy] * src_w, y1t[dy] * src_w, fyt[dy],
+                      x0t, x1t, fxt, dst_w, (dst_y + dy) * SCREEN_WIDTH + dst_x,
+                      cut, black, red)
     return dst_x, dst_y, dst_w, dst_h
+
+
+def _bilinear_table(src_n, dst_n):
+    """Per output pixel: the two source pixels to blend and the weight
+    (0..255) of the second, using the pixel-centre convention (as Pillow)."""
+    a = array.array("H", bytes(2 * dst_n))
+    b = array.array("H", bytes(2 * dst_n))
+    f = bytearray(dst_n)
+    for d in range(dst_n):
+        s = ((2 * d + 1) * src_n * 256) // (2 * dst_n) - 128
+        if s < 0:
+            s = 0
+        i = s >> 8
+        a[d] = i
+        b[d] = i + 1 if i + 1 < src_n else i
+        f[d] = s & 255
+    return a, b, f
+
+
+@micropython.viper
+def _bilinear_row(kinds, row_a: int, row_b: int, fy: int, x0t, x1t, fxt,
+                  dst_w: int, base: int, cut: int, black, red):
+    """One enlarged screen row from two classified source rows."""
+    k = ptr8(kinds)
+    X0 = ptr16(x0t)
+    X1 = ptr16(x1t)
+    FX = ptr8(fxt)
+    bk = ptr8(black)
+    rd = ptr8(red)
+    gy = 256 - fy
+    for dx in range(dst_w):
+        x0 = X0[dx]
+        x1 = X1[dx]
+        fx = FX[dx]
+        gx = 256 - fx
+        dark = 0
+        reds = 0
+        p = k[row_a + x0]
+        w = gx * gy
+        if p == _BLACK:
+            dark += w
+        elif p == _RED:
+            reds += w
+        p = k[row_a + x1]
+        w = fx * gy
+        if p == _BLACK:
+            dark += w
+        elif p == _RED:
+            reds += w
+        p = k[row_b + x0]
+        w = gx * fy
+        if p == _BLACK:
+            dark += w
+        elif p == _RED:
+            reds += w
+        p = k[row_b + x1]
+        w = fx * fy
+        if p == _BLACK:
+            dark += w
+        elif p == _RED:
+            reds += w
+        i = base + dx
+        byte = i >> 3
+        bit = 128 >> (i & 7)
+        if dark > cut:
+            bk[byte] = bk[byte] | bit
+            rd[byte] = rd[byte] & (255 ^ bit)
+        elif reds > 32768:
+            rd[byte] = rd[byte] | bit
 
 
 def _rows(idat, src_w, src_h, channels, depth):
@@ -439,3 +477,61 @@ def _draw_shrunk(src_w, src_h, ctype, depth, palette, trns, idat,
         rows += 1
     if rows:
         _emit(sums, reds, colcount, rows, dst_w, dst_x, dst_y + cur, threshold, black, red)
+
+
+# ---- readability check on the drawn result ---------------------------------
+
+@micropython.viper
+def _run_stats(black, x0: int, y0: int, w: int, h: int, hist, gaps):
+    """Scan rows of the black plane in the box. hist[n] counts black runs of
+    n pixels (n capped at 31); gaps[0] counts white gaps of <= 3 px and
+    gaps[1] gaps of <= 40 px, only between ink on the same row."""
+    bk = ptr8(black)
+    H = ptr32(hist)
+    G = ptr32(gaps)
+    for yy in range(y0, y0 + h):
+        run = 0
+        state = 0      # 0 white, 1 black
+        seen_ink = 0
+        base = yy * SCREEN_WIDTH
+        for xx in range(x0, x0 + w):
+            i = base + xx
+            v = (bk[i >> 3] >> (7 - (i & 7))) & 1
+            if v == state:
+                run += 1
+                continue
+            if state == 1:
+                if run > 31:
+                    run = 31
+                H[run] = H[run] + 1
+                seen_ink = 1
+            elif seen_ink:
+                if run <= 3:
+                    G[0] = G[0] + 1
+                if run <= 40:
+                    G[1] = G[1] + 1
+            state = v
+            run = 1
+
+
+def readability(black, x, y, w, h):
+    """(median black stroke width in px, % of letter-sized gaps that are
+    <= 3 px) for the drawn box. Small strokes and tight gaps mean text too
+    small to read on the panel (calibrated by eye on 13 comics, 2026-11-06:
+    readable ones had median 3-4 px and <= 37 %; unreadable 2 px and >= 40 %)."""
+    hist = bytearray(4 * 32)
+    gaps = bytearray(8)
+    _run_stats(black, x, y, w, h, hist, gaps)
+    counts = [int.from_bytes(hist[4 * i:4 * i + 4], "little") for i in range(32)]
+    total = sum(counts)
+    median = 0
+    if total:
+        acc = 0
+        for n in range(32):
+            acc += counts[n]
+            if acc * 2 >= total:
+                median = n
+                break
+    thin = int.from_bytes(gaps[0:4], "little")
+    short = int.from_bytes(gaps[4:8], "little")
+    return median, (100 * thin // short) if short else 0

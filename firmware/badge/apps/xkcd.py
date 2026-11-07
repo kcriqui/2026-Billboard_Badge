@@ -36,6 +36,14 @@ USE_FAST_REFRESH = True
 FAST_IN_A_ROW = 9  # so every 10th update is a full one
 MAX_DOWNLOAD = 1500000  # bytes; larger PNGs don't fit comfortably in RAM
 MIN_SCALE = 0.6  # skip comics that would shrink below this (unreadable)
+# Readability, measured on the drawn comic (fit_png.readability). Skip if the
+# median stroke is this thin or more of the letter gaps are this tight.
+# Calibrated by Kevin on 13 comics (2026-11-06); the log records both numbers
+# for every comic, to retune. Comics requested via /data/xkcd_next are shown
+# regardless.
+MIN_STROKE_PX = 3
+MAX_TIGHT_GAPS_PCT = 40
+READ_TRIES = 3  # unreadable comics in a row before showing one anyway
 TRIES = 6  # random picks per update before giving up
 
 HEADER_H = 44
@@ -185,7 +193,7 @@ class XkcdApp(BaseApp):
     def _fetch(self):
         """Pick random comics until one is a PNG that fits; return (info, png)."""
         latest = self._latest()
-        wanted = _take_requested()
+        wanted = requested = _take_requested()
         for _ in range(TRIES):
             num = wanted or random.randint(1, latest)
             wanted = 0
@@ -202,7 +210,7 @@ class XkcdApp(BaseApp):
                 fw, _ = fit_png.fit_size(w, h, box_w, box_h)
                 if fw < w * MIN_SCALE:
                     raise SkipComic("would shrink to %d%%" % (fw * 100 // w))
-                return info, png
+                return info, png, bool(requested) and num == requested
             except SkipComic as ex:
                 log("skip #%d: %s" % (num, ex))
             gc.collect()
@@ -284,7 +292,9 @@ class XkcdApp(BaseApp):
         self._render_text(title, text, HEADER_H + MARGIN)
         display.update()
 
-    def _show(self, info, png):
+    def _show(self, info, png, check=True):
+        """Draw and refresh. Returns False (nothing refreshed) if `check` and
+        the drawn comic is too small/busy to read on the panel."""
         display.clear()
         top = HEADER_H + MARGIN
         box_w, box_h = self._box(0)
@@ -294,7 +304,13 @@ class XkcdApp(BaseApp):
             png, display._framebuffer_black, display._framebuffer_red,
             MARGIN, top, box_w, box_h,
         )
-        log("drew #%d in %d ms" % (info["num"], time.ticks_diff(time.ticks_ms(), t)))
+        stroke, tight = fit_png.readability(display._framebuffer_black, MARGIN, y, box_w, h)
+        readable = stroke >= MIN_STROKE_PX and tight < MAX_TIGHT_GAPS_PCT
+        log("drew #%d in %d ms; stroke %d px, tight gaps %d%%%s" % (
+            info["num"], time.ticks_diff(time.ticks_ms(), t), stroke, tight,
+            "" if readable else " -> unreadable"))
+        if check and not readable:
+            return False
         png = None
         gc.collect()
         title = "#%d: %s" % (info["num"], info.get("safe_title") or info.get("title", ""))
@@ -309,6 +325,7 @@ class XkcdApp(BaseApp):
             time.ticks_diff(time.ticks_ms(), t), "fast" if fast else "full",
             " (comic has red)" if has_red else ""))
         display.update(fast=fast)
+        return True
 
     # ---- app loop ---------------------------------------------------------
 
@@ -328,10 +345,16 @@ class XkcdApp(BaseApp):
         leds.write()
         try:
             log("wifi", wifi.connect())
-            info, png = self._fetch()
+            for attempt in range(READ_TRIES):
+                info, png, requested = self._fetch()
+                last = attempt == READ_TRIES - 1
+                if self._show(info, png, check=not (requested or last)):
+                    break
+                log("skip #%d: too small/busy to read on the badge" % info["num"])
+                png = None
+                gc.collect()
             leds.fill((0, 0, 0))
             leds.write()
-            self._show(info, png)
             self.next_update = time.time() + UPDATE_S
         except wifi.WifiError as ex:
             log("wifi error:", ex)
