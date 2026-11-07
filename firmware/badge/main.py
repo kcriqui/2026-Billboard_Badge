@@ -58,6 +58,9 @@ async def main():
     # Battery mode: sleeps between display updates when on battery (lib/power.py).
     from lib.power import power
     _power_task = aio.create_task(power.run(display))
+    # OTA updates over WiFi while on external power (lib/ota.py, ./dev.sh ota).
+    from lib.ota import ota
+    _ota_task = aio.create_task(ota.run())
 
     print("Running main loop...")
     while True:

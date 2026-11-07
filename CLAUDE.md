@@ -2,9 +2,9 @@
 
 ## Rules
 - Work here (`~/dev/2026-Billboard_Badge`). Commit and push to `origin` (the fork) after each working step; `upstream` is Hack-a-Day — never push there.
-- Deploy with `cd firmware && ./dev.sh push`. Confirm the target port before flashing or erasing; the badge is the `Espressif_Systems_Espressif_Device` port, not the USB-JTAG Feather.
+- Deploy with `cd firmware && ./dev.sh push` (USB) or `./dev.sh ota` (WiFi). Confirm the target port before flashing or erasing; the badge is the `Espressif_Systems_Espressif_Device` port, not the USB-JTAG Feather.
 - Never run display code after a soft reset (hangs the badge) — hard-reset first. If USB stops answering, ask Kevin to press RESET.
-- Never commit `firmware/badge/data/wifi.json` or `tools/fonts/`; never handle the WiFi password.
+- Never commit `firmware/badge/data/wifi.json`, `firmware/badge/data/ota.json` or `tools/fonts/`; never read WiFi passwords or the OTA token (Kevin runs `tools/add_wifi.py`).
 - Show visual options as side-by-side previews and let Kevin choose before deploying.
 - Installs: apt/Flatpak first (Kevin runs sudo). Ask before downloading files.
 - Credit third-party data/fonts/code in the app and the README Credits section.

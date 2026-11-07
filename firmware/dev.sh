@@ -3,6 +3,9 @@
 #
 #   ./dev.sh push      copy changed files in badge/ to the badge, reset, show output
 #   ./dev.sh ls        compare badge/ with what is on the badge
+#   ./dev.sh ota [H]   push over WiFi (badge on any USB power), then reset;
+#                      H = host or IP, default $BADGE_HOST or kevin-badge.local
+#   ./dev.sh ota-ls [H] compare over WiFi
 #   ./dev.sh repl      open the REPL (Ctrl-] or Ctrl-x to leave)
 #   ./dev.sh log       reset and watch the badge's print() output
 #   ./dev.sh run F.py  run a file from this computer without copying it
@@ -15,6 +18,11 @@
 # are never picked automatically.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+case "${1:-}" in
+  ota)    exec python3 scripts/update.py push --reset --host "${2:-${BADGE_HOST:-kevin-badge.local}}" ;;
+  ota-ls) exec python3 scripts/update.py ls --host "${2:-${BADGE_HOST:-kevin-badge.local}}" ;;
+esac
 
 if [[ -z "${BADGE_PORT:-}" ]]; then
   shopt -s nullglob
@@ -36,5 +44,5 @@ case "${1:-}" in
   log)   "${mp[@]}" reset; sleep 2; exec mpremote connect "$BADGE_PORT" resume repl ;;
   run)   shift; exec "${mp[@]}" run "$@" ;;
   stubs) python3 -m pip install -U --no-user --target ../typings "micropython-esp32-esp32_generic_s3-stubs==1.24.1.*" ;;
-  *)     sed -n '2,13p' "$0"; exit 1 ;;
+  *)     sed -n '2,16p' "$0"; exit 1 ;;
 esac

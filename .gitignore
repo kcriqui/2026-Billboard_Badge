@@ -6,3 +6,6 @@ tools/fonts/
 
 # Third-party map data used by tools/make_world_map.py (download, not committed)
 tools/data/
+
+# OTA update token (tools/ota_setup.py) - never commit
+firmware/badge/data/ota.json
