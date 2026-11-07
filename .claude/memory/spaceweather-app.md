@@ -17,7 +17,7 @@ metadata:
   the badge (both layers ~1 s). Runs on the laptop with ptr8/ptr32 stubs, so
   previews are the badge's own output.
 - Two layers: **red** (deep, slow; amount from Kp/storm) only redrawn with a
-  full refresh — launch, hourly, storm-level change, User B — and cached;
+  full refresh — launch, every 5th update, storm-level change, User B — and cached;
   **black** (surface) redrawn every 3 min with fast `keep_red` refresh,
   skipping red pixels; waviness = southward Bz, density = Bt, drift per update
   = solar wind speed, so earlier frames ghost.
@@ -26,6 +26,16 @@ metadata:
   troughs) to > 254 (solid peaks): calm ≈ 55 % white / 24 % red / 21 % black,
   storm ≈ 44 % red. Red offset -230 keeps calm red from swamping the black
   (black is never drawn over red). Tune in `plasma.from_weather`.
+- **Red fades under fast refreshes** even with `keep_red` (Kevin saw it
+  after a few updates). Not VCOM: in the driver-B fast LUT, VCOM (table 4)
+  is ground throughout, so idle red pixels see no direct field. Likely cause:
+  fringe fields from neighbouring dots being driven (white pixels get a
+  0x99 shake, black a hard drive) disturb the isolated dithered red dots;
+  3 pulses per update triple it. Fix in use (Kevin chose "A + test B"):
+  full refresh after every `FAST_IN_A_ROW = 4` fast ones (~15 min) and
+  `FAST_PASSES = 2`. If still fading: more full refreshes, or option C
+  (solid red areas, dither only black/white). Earth's thin red coastlines
+  may show the same effect.
 - Small caption (bitmap `font_small`) with the numbers + "data: NOAA SWPC";
   User B toggles it (forces a full refresh). User A = update now.
 - Feeds: `/products/summary/solar-wind-speed.json` and `-mag-field.json`

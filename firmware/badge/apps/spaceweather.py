@@ -3,8 +3,9 @@
 No solid areas: the whole screen is an ordered-dither of white, red and black
 (lib/plasma.py), in two layers:
   - red, deep and slow: amount set by the Kp index / storm level; redrawn
-    only with a full refresh (red needs one) on launch, hourly, and when the
-    storm level changes - the flash is the "event".
+    only with a full refresh (red needs one) on launch, after FAST_IN_A_ROW
+    fast updates (red fades under fast refreshes), and when the storm level
+    changes - the flash is the "event".
   - black, the surface: redrawn every UPDATE_S with a fast refresh that
     leaves red alone (keep_red); its waviness follows southward Bz, its
     density Bt, and how far it drifts each update the solar wind speed, so
@@ -30,6 +31,13 @@ from lib.led_bar import leds
 
 UPDATE_S = 3 * 60
 FULL_S = 60 * 60
+# Red fades under fast refreshes (fringe fields from the driven black/white
+# neighbours of each dithered red dot), so top it up with a full refresh
+# after this many fast ones (4 x 3 min -> every 15 min).
+FAST_IN_A_ROW = 4
+# Pulses per fast refresh (driver B default is 3); fewer = less disturbance
+# of the red, slightly lighter black / more ghosting.
+FAST_PASSES = 2
 RETRY_S = 60
 SWPC = "https://services.swpc.noaa.gov"
 PLANE_BYTES = plasma.W * plasma.H // 8
@@ -47,6 +55,7 @@ class SpaceWeatherApp(BaseApp):
         self.next_update = 0
         self.last_full = -FULL_S
         self.step = 0
+        self.fast_in_a_row = 0
         self.wx = {}
         self.level = None        # (storm?, G) at the last full refresh
         self.red = None          # cached red plane between full refreshes
@@ -101,7 +110,9 @@ class SpaceWeatherApp(BaseApp):
         red_p, black_p = plasma.from_weather(self.wx, self.step)
         level = ((self.wx.get("g") or 0) >= 1 or (self.wx.get("kp") or 0) >= 5, self.wx.get("g"))
         full = (force_full or self.launched or self.red is None or level != self.level
+                or self.fast_in_a_row >= FAST_IN_A_ROW
                 or time.time() - self.last_full >= FULL_S)
+        self.fast_in_a_row = 0 if full else self.fast_in_a_row + 1
         t = time.ticks_ms()
         if full:
             plasma.layer(display._framebuffer_red, red_p)
@@ -115,7 +126,8 @@ class SpaceWeatherApp(BaseApp):
             self._draw_caption()
         print("spaceweather: %s, drew in %d ms, %s refresh" % (
             self.wx, time.ticks_diff(time.ticks_ms(), t), "full" if full else "fast"))
-        display.update(fast=not full, keep_red=not full)
+        display.update(fast=not full, keep_red=not full,
+                       passes=None if full else FAST_PASSES)
         self.next_update = time.time() + UPDATE_S
         gc.collect()
 
