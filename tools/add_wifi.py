@@ -67,6 +67,9 @@ def main():
         elif keymgmt != "wpa-psk" and keymgmt != "sae":
             print(f"{conn}: {keymgmt} (enterprise) isn't supported by the badge; skipped.")
             continue
+        elif not psk and not sys.stdin.isatty():
+            print(f"{conn}: NetworkManager didn't reveal the password; skipped.")
+            continue
         elif not psk:
             psk = getpass.getpass(f"NetworkManager didn't reveal the password for {ssid!r}; type it: ")
         current = [n for n in current if n.get("ssid", "").lower() != ssid.lower()]

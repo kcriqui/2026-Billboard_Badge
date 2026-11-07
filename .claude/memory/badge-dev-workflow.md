@@ -12,18 +12,14 @@ metadata:
   `badge/`, resets, shows output). `dev.sh` auto-picks the badge port.
   `scripts/update.py` takes `--port`/`$BADGE_PORT` and never overwrites
   `/data/panel_config.json` (boot counter / splash).
-- OTA (added 2026-11-06): `./dev.sh ota [host]` does the same push over WiFi
-  then hard-resets; `./dev.sh ota-ls` compares. Badge side is `lib/ota.py`
-  (HTTP on port 8266, `X-Token` from `/data/ota.json`, started in main.py),
-  listening only on external power (battery mode turns WiFi off) and as
-  `kevin-badge.local` (mDNS hostname set in `lib/wifi.py`). Token made by
-  `tools/ota_setup.py` into gitignored `firmware/badge/data/ota.json`; a USB
-  push installs it. Code-only OTA: MicroPython firmware itself still needs
-  USB. A push that breaks main.py/WiFi kills OTA until a USB push.
 - WiFi networks: `firmware/badge/data/wifi.json` on the laptop is the master
-  (push overwrites the badge's copy). Kevin adds networks with
-  `python3 tools/add_wifi.py`, which copies passwords from NetworkManager
-  without printing them — Claude doesn't read them.
+  (push overwrites the badge's copy). It holds a list; the badge tries the
+  ones in range. `python3 tools/add_wifi.py [conn names]` merges networks
+  saved in NetworkManager without printing passwords. 2026-11-06: all 12
+  saved WPA networks added (Kevin OK'd taking them from the laptop); the
+  OWE "#SFO FREE WIFI" was skipped.
+- No OTA: Kevin tried WiFi push and GitHub-pull OTA (2026-11-06) and chose
+  USB-only updates. Don't re-propose OTA.
 - After any `mpremote` command that soft-resets (cp, exec without `resume`),
   do a hard `mpremote reset` before anything imports `lib.epd` — see
   [[badge-gotchas]].

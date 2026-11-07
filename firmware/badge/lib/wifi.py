@@ -11,9 +11,6 @@ import time
 
 import network
 
-# mDNS name: the badge answers as <HOSTNAME>.local (used by ./dev.sh ota).
-HOSTNAME = "kevin-badge"
-
 _wlan = network.WLAN(network.STA_IF)
 
 
@@ -54,10 +51,6 @@ def connect(timeout_s: int = 20) -> str:
     if is_connected():
         return _wlan.ifconfig()[0]
     nets = _networks()
-    try:
-        network.hostname(HOSTNAME)  # must be set before the interface is up
-    except Exception:
-        pass
     _wlan.active(True)
     # SSID -> name as broadcast. Matching ignores case ("supercon" finds
     # "Supercon"), but the join uses the exact broadcast name.
