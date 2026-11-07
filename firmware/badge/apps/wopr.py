@@ -102,9 +102,41 @@ USA = ("SEATTLE", "DENVER", "CHICAGO", "NEW YORK", "LOS ANGELES", "ANCHORAGE", "
 TARGETS = (SIDES[1], ("LONDON", "PARIS"))
 
 
-def _defcon(incoming):
-    """DEFCON from missiles in flight toward US cities (Kevin, 2026-11-07)."""
-    return 5 if incoming == 0 else 4 if incoming == 1 else 3 if incoming <= 3 else 2 if incoming <= 5 else 1
+CLOSE_STEPS = 2        # a US-bound missile this many updates from impact is "close"
+CLOSE_FOR_1 = 3        # DEFCON 1 only when at least this many are close
+PATH_GAP = 7           # px between the dots of the faint path to the target
+TARGET_R = 11          # faint dotted circle round each target
+
+
+def _defcon(incoming, close):
+    """DEFCON from missiles in flight toward US cities; 1 only when several
+    of them are close to impact (Kevin, 2026-11-07)."""
+    if close >= CLOSE_FOR_1:
+        return 1
+    return 5 if incoming == 0 else 4 if incoming == 1 else 3 if incoming <= 3 else 2
+
+
+def _dotted(fb, pts, gap):
+    """Single-pixel dots every `gap` px along a polyline (a faint line on
+    e-paper); skips the date-line jump on the world board."""
+    carry = 0.0
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        dx, dy = x1 - x0, y1 - y0
+        if abs(dx) > MAP_W // 2:
+            continue
+        seg = (dx * dx + dy * dy) ** 0.5
+        d = carry
+        while d < seg:
+            f = d / seg
+            fb.pixel(int(x0 + dx * f), int(y0 + dy * f), 1)
+            d += gap
+        carry = d - seg
+
+
+def _dotted_circle(fb, x, y, r):
+    for k in range(0, 360, 20):
+        a = math.radians(k)
+        fb.pixel(x + int(r * math.cos(a)), y + int(r * math.sin(a)), 1)
 
 
 # ---- the two boards -----------------------------------------------------------
@@ -186,7 +218,19 @@ VIEWS = (World, Polar)
 
 # ---- drawing helpers ----------------------------------------------------------
 
-_DIAMOND = array.array("h", (0, -6, 6, 0, 0, 6, -6, 0))
+# Missile outline pointing along +x: nose, body, tail fins (rotated per head).
+_MISSILE = ((10, 0), (5, -2), (-5, -2), (-9, -6), (-8, -2), (-8, 2), (-9, 6), (-5, 2), (5, 2))
+
+
+def _missile(fb, x, y, dx, dy):
+    """Filled missile shape at (x, y) pointing along (dx, dy)."""
+    n = (dx * dx + dy * dy) ** 0.5 or 1
+    c, s = dx / n, dy / n
+    coords = array.array("h")
+    for px, py in _MISSILE:
+        coords.append(int(round(px * c - py * s)))
+        coords.append(int(round(px * s + py * c)))
+    fb.poly(x, y, coords, 1, True)
 
 
 def _ring(x, y, r):
@@ -266,18 +310,22 @@ class WoprApp(BaseApp):
             gc.collect()
         return new_big
 
-    def _launch(self, src, dst, delay):
-        flight = FLIGHT[0] + random.getrandbits(8) % (FLIGHT[1] - FLIGHT[0] + 1)
+    def _launch(self, src, dst, delay, flight=None):
+        if flight is None:
+            flight = FLIGHT[0] + random.getrandbits(8) % (FLIGHT[1] - FLIGHT[0] + 1)
         self.missiles.append([self.step + delay, flight, src, dst,
                               1000 + random.getrandbits(13) % 9000])
 
     def _big_salvo(self, now=False):
-        """4-8 missiles from the east side at US cities (spread over two
-        updates, or all at once when `now`)."""
+        """4-8 missiles from the east side at US cities (launched over two
+        updates, or all at once when `now`), arriving close together."""
         n = BIG_SALVO[0] + random.getrandbits(8) % (BIG_SALVO[1] - BIG_SALVO[0] + 1)
+        # One flight time for the salvo (+-1 update), so it arrives together
+        # and several missiles are close at once: that's when DEFCON hits 1.
+        base = FLIGHT[0] + random.getrandbits(8) % (FLIGHT[1] - FLIGHT[0] - 1)
         for _ in range(n):
             self._launch(random.choice(SIDES[1]), random.choice(USA),
-                         0 if now else random.getrandbits(1))
+                         0 if now else random.getrandbits(1), base + random.getrandbits(1))
         lands = max(m[0] + m[1] for m in self.missiles[-n:])
         self.salvo_lands = max(self.salvo_lands or 0, lands)
 
@@ -323,11 +371,15 @@ class WoprApp(BaseApp):
         return any(m[0] == self.step for m in self.missiles)
 
     def _incoming_usa(self):
-        n = 0
+        """(missiles in flight to US cities, how many of those are close)."""
+        n = close = 0
         for m in self.missiles:
-            if m[3] in USA and 0 <= self.step - m[0] <= m[1]:
+            age = self.step - m[0]
+            if m[3] in USA and 0 <= age <= m[1]:
                 n += 1
-        return n
+                if m[1] - age <= CLOSE_STEPS:
+                    close += 1
+        return n, close
 
     def _track(self, view, m):
         key = (view.number, m[4])
@@ -378,7 +430,12 @@ class WoprApp(BaseApp):
                             fb.line(x0 + ox, y0 + oy, x1 + ox, y1 + oy, 1)
                             fb.line(x0 + ox + 1, y0 + oy, x1 + ox + 1, y1 + oy, 1)
                 hx, hy = pts[k - 1]
-                fb.poly(hx, hy, _DIAMOND, 1, True)
+                _dotted(fb, pts[k - 1:], PATH_GAP)      # faint path to the target
+                _dotted_circle(fb, pts[-1][0], pts[-1][1], TARGET_R)
+                px, py = pts[k - 2]
+                if abs(hx - px) > MAP_W // 2:           # just crossed the date line
+                    px += MAP_W if hx > px else -MAP_W
+                _missile(fb, hx, hy, hx - px, hy - py)
                 lx, ly = pts[0]     # label at the launch point: doesn't move
                 bitfont.draw(font_mono, display._framebuffer_black, lx + 6, ly + 4, "%d" % m[4])
                 if age <= 1:
@@ -510,8 +567,8 @@ class WoprApp(BaseApp):
             switched = True
         self.want_switch = False
         view = VIEWS[self.view]
-        incoming = self._incoming_usa()
-        level = _defcon(incoming)
+        incoming, close = self._incoming_usa()
+        level = _defcon(incoming, close)
         rising = self.defcon is not None and level < self.defcon
         full = (force_full or self.launched or new_big or switched or rising
                 or self.defcon is None or now - self.last_full >= FULL_S) and not lesson

@@ -21,7 +21,12 @@ film (12-word quote, Kevin's request) appears black-on-white in a panel
 over the map with the quick refresh (Kevin: not a full-screen flash);
 `font_mono_huge` (DejaVu Sans Mono Bold 46). B to lesson takes ~30-40 min. Missiles are made up, stored as city-to-city
 flights so tracks carry on across view changes; labels sit at launch points
-(moving labels smeared). DEFCON = missiles in flight to US cities (Kevin);
+(moving labels smeared). Heads are rotated missile shapes; a faint dotted
+path runs from each head to a dotted circle at its target.
+`tools/preview_wopr_app.py` renders the app's real drawing code on the
+laptop (framebuf stand-in) - use it for WOPR layout checks. DEFCON = missiles in flight to US cities (Kevin); 1 only when >=3 US-bound
+missiles are within 2 updates of impact (big salvos share a flight time,
++-1, so they arrive together);
 ordinary salvos avoid US cities, a big salvo (1 in 10, 4-8 missiles) spikes
 it to 1-2; rising DEFCON forces a full refresh, falling waits. Simulated
 over a day: DEFCON 5 ~58 % of the time. Fonts `font_mono`, `font_mono_big`,
