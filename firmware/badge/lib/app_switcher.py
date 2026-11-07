@@ -3,13 +3,16 @@
 import asyncio as aio  # type: ignore
 import os
 import sys
+import time
 import btree
 
 from apps.base_app import BaseApp
 from lib.button import MenuMinus, MenuPlus, UserA, UserB, PRESSED_READ
 from lib.led_bar import leds
 
-# MENU_TIMEOUT_MILLISECONDS = 1000
+# Menu opened from a running app closes after this long without a Menu +/-
+# press, back to that app as it was (Kevin, 2026-11-07).
+MENU_TIMEOUT_MS = 10000
 
 
 APPMOD_DENYLIST = {
@@ -25,6 +28,8 @@ class AppSwitcher:
         self.active_idx = initial_idx
         self.selecting_mode = True
         self.selection_idx = initial_idx
+        self.menu_from_app = False   # menu opened from a running app (can time out)
+        self.menu_touched = 0        # ticks_ms of the last Menu +/- press
 
         # Discover and load apps
         app_mods = []
@@ -81,11 +86,13 @@ class AppSwitcher:
                 leds.menu_display(self.selection_idx, len(self.apps))
 
                 if MenuPlus.pressed():
+                    self.menu_touched = time.ticks_ms()
                     self.selection_idx = (self.selection_idx + 1) % len(self.apps)
                     print(
                         f"Selected app {self.selection_idx}: {self.apps[self.selection_idx].name}"
                     )
                 if MenuMinus.pressed():
+                    self.menu_touched = time.ticks_ms()
                     self.selection_idx = (self.selection_idx - 1) % len(self.apps)
                     print(
                         f"Selected app {self.selection_idx}: {self.apps[self.selection_idx].name}"
@@ -99,11 +106,22 @@ class AppSwitcher:
                     leds.write()
                     self.selecting_mode = False
                     _save_last_app(self.apps[self.active_idx].name)
+                elif (self.menu_from_app
+                      and time.ticks_diff(time.ticks_ms(), self.menu_touched) > MENU_TIMEOUT_MS):
+                    # Idle in the menu: back to the running app, not relaunched.
+                    print(f"Menu timed out, back to {self.apps[self.active_idx].name}")
+                    self.selection_idx = self.active_idx
+                    leds.clear_sequence()
+                    leds.fill((0, 0, 0))
+                    leds.write()
+                    self.selecting_mode = False
                 await aio.sleep_ms(10)
             else:
                 if MenuMinus.pressed() or MenuPlus.pressed():
                     self.selection_idx = self.active_idx
                     self.selecting_mode = True
+                    self.menu_from_app = True
+                    self.menu_touched = time.ticks_ms()
                     ## Reset pressed state so that button doesn't advance menu, just enters menu state
                     MenuMinus._pressed_state = PRESSED_READ
                     MenuPlus._pressed_state = PRESSED_READ

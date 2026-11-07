@@ -51,3 +51,6 @@ metadata:
   real count (never truncated); nothing reads it. It follows
   discovery order, not names; re-check with `switcher.apps` rather than
   assuming; `/data/last_app` (app name) reopens an app without the menu.
+- Menu timeout (2026-11-07): a menu opened from a running app closes after
+  `MENU_TIMEOUT_MS` (10 s) without Menu +/-, back to that app un-relaunched
+  (`lib/app_switcher.py`). The boot-time menu doesn't time out.
