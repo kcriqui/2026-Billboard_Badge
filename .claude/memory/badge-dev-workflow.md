@@ -19,6 +19,9 @@ metadata:
   (interrupts main.py but keeps LVGL state), then `mpremote reset` to restart.
   Test scripts that `asyncio.run()` must call `asyncio.new_event_loop()`
   first ([[badge-gotchas]]). Wait for any refresh to finish before interrupting.
+- Battery mode can't be tested over USB without forcing it: create
+  `/data/battery_mode`, reset, let Kevin test; to undo, have Kevin press RESET
+  and remove the file within ~45 s (before it idles to sleep).
 - Prefer having Kevin press buttons over driving apps via the REPL; read
   results afterwards from log files on flash (e.g. `/data/xkcd.log`).
 - Compile-check viper code: `mpy-cross -march=xtensawin -o /dev/null file.py`.

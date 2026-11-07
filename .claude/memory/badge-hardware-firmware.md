@@ -30,9 +30,16 @@ metadata:
   `leds.show_overlay()`/`clear_overlay()` in `lib/led_bar.py`. All LED writes
   go through `LedBar._out()`, so the overlay wins over app/menu LEDs and
   theirs reappear afterwards — don't call the NeoPixel `write()` directly.
-- Power: single-cell LiPo pads + MCP73831 charger on the back. Whether Kevin's
-  badge has a battery fitted is unknown; battery life with WiFi left on is
-  untested. Without a battery, unplugging USB restarts the badge.
+- Power: Kevin's badge has a single-cell LiPo on the pads (MCP73831 charger).
+  Input-voltage sense (`lib/board.reg_in_v_sns`, x2 divider) reads ~4.6-4.7 V
+  on USB, <= 4.2 V on battery.
+- Battery mode (`lib/power.py`, started in main.py), for any app: on battery
+  (< 4.45 V, or `/data/battery_mode` exists) and idle 15 s after a refresh →
+  WiFi off, LEDs dark, light sleep in 150 ms steps reading all 4 buttons
+  between; 300 ms awake every 20 s so timer apps run (faint blue blink on
+  LED 0). A press longer than ~0.15 s wakes it and acts normally. Logs volts
+  and sleep totals to `/data/power.log` every 10 min. Kevin tested it forced
+  over USB 2026-11-06: works. Battery life not yet measured.
 - Menu order as seen on the badge (Schedule contributes 3 apps):
   Workshops, Sat Talks, Sun Talks, Gallery, Hello, Nametag, XKCD.
   It follows the order apps are discovered, not the names — check

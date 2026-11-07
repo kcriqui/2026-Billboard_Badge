@@ -55,6 +55,9 @@ async def main():
     _display_task = aio.create_task(display.run())
     _led_task = aio.create_task(leds.update())
     _apps_task = aio.create_task(switcher.arun())
+    # Battery mode: sleeps between display updates when on battery (lib/power.py).
+    from lib.power import power
+    _power_task = aio.create_task(power.run(display))
 
     print("Running main loop...")
     while True:

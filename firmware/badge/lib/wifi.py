@@ -35,6 +35,17 @@ def is_connected() -> bool:
     return _wlan.active() and _wlan.isconnected()
 
 
+def off():
+    """Radio off (battery mode). connect() turns it back on when needed."""
+    if _wlan.active():
+        try:
+            _wlan.disconnect()
+        except OSError:
+            pass
+        _wlan.active(False)
+        print("wifi: off")
+
+
 def connect(timeout_s: int = 20) -> str:
     """Connect if needed. Returns the IP address or raises WifiError."""
     if is_connected():

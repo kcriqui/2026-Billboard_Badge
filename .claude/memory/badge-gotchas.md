@@ -25,6 +25,14 @@ metadata:
   A dropped task never runs its `finally:` — so don't toggle shared flags
   around awaits (PR #4 did this with `_reverse_fb_bits`; we removed it after
   it left images bit-mirrored).
+- **Light sleep vs USB and pins.** `machine.lightsleep()` breaks the USB
+  serial link until a reset (on battery that's irrelevant; plugging USB in
+  after battery use may need RESET). Pin wake doesn't work for the buttons:
+  only RTC pins (GPIO 0-21) can wake (User A/Menu - are 39/40), only one
+  `Pin.irq(wake=)` slot exists ("no resources"), button pull-ups drop out in
+  sleep (instant false wakes), and `hold=True` on the pins hung the chip.
+  Hence timer-only polling sleep. Test over USB by having the test write to
+  flash and `machine.reset()` at the end, then read the file.
 - **mpremote auto-connect** may pick the Feather — always pass the badge port.
 - WiFi SSIDs are case-sensitive on the ESP32 (con network is `Supercon`);
   `lib/wifi.py` matches case-insensitively to avoid this trap.
