@@ -21,7 +21,11 @@ metadata:
   **black** (surface) redrawn every 3 min with fast `keep_red` refresh,
   skipping red pixels; waviness = southward Bz, density = Bt, drift per update
   = solar wind speed, so earlier frames ghost.
-- Calm ≈ 24 % red / 3 % black; storm ≈ 46 % red. Tune in `plasma.from_weather`.
+- Contrast: Kevin first asked for subtle, then "increase the contrast; some
+  solid colour at the peaks is OK". Tones now sweep from < 0 (clean white
+  troughs) to > 254 (solid peaks): calm ≈ 55 % white / 24 % red / 21 % black,
+  storm ≈ 44 % red. Red offset -230 keeps calm red from swamping the black
+  (black is never drawn over red). Tune in `plasma.from_weather`.
 - Small caption (bitmap `font_small`) with the numbers + "data: NOAA SWPC";
   User B toggles it (forces a full refresh). User A = update now.
 - Feeds: `/products/summary/solar-wind-speed.json` and `-mag-field.json`

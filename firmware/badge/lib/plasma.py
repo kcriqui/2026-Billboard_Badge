@@ -88,8 +88,9 @@ def layer(plane, prm, avoid=None):
 def from_weather(wx, step):
     """(red_params, black_params) for this space weather and update number.
 
-    Subtle by design: tones stay low, so the screen is mostly white with a
-    red haze and sparse black. Storms push both up."""
+    High contrast (Kevin, 2026-11-06): each layer's tone sweeps from below 0
+    (clean white) to above 254 (solid colour) across the field, so the
+    troughs are white and the peaks solid. Storms push both up."""
     speed = min(max(wx.get("speed") or 400, 250), 900)
     bt = min(max(wx.get("bt") or 5, 1), 40)
     bz = min(max(wx.get("bz") or 0, -40), 40)
@@ -97,13 +98,13 @@ def from_weather(wx, step):
     storm = (wx.get("g") or 0) >= 1 or kp >= 5
     south = max(0, -bz)
     # red: deep, slow, broad; amount from Kp
-    r_span = 150 + kp * 12 + (50 if storm else 0)         # 150..308
-    red = params(5, 6, 3, 4, 40, 90, 160, 220, -30, r_span, 3, 5)
+    r_span = 480 + kp * 15 + (60 if storm else 0)         # 480..675
+    red = params(5, 6, 3, 4, 40, 90, 160, 220, -230, r_span, 3, 5)
     # black: surface; waviness from southward Bz, density from Bt, drift from speed
     freq = 9 + int(south / 2) + int(kp)                   # 9..~40
     drift = int(4 + (speed - 250) / 30)                   # table steps per update
-    b_span = 50 + bt * 2 + south * 2                      # density
+    b_span = 330 + bt * 3 + south * 3                     # density
     black = params(freq, freq + 3, freq // 2 + 2, freq // 2 + 5,
                    step * drift, 200 - step * drift // 2, step * drift * 2, 77 + step * drift,
-                   -30, b_span)
+                   -110, b_span)
     return red, black
