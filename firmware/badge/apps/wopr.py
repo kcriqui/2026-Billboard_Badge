@@ -29,6 +29,11 @@ on launch, view change, rising DEFCON, a new M6+ quake, and every FULL_S.
 User A: switch to the other board now (fresh data, full refresh).
 User B: launch a big salvo at US cities now (DEFCON goes up).
 
+When a salvo at the US has landed (blast rings shown for one update), the
+board clears (no tracks) and WOPR shows the lesson it learned in the film,
+black on white over the map, with the quick refresh (Kevin, 2026-11-07).
+It stays until the next update; DEFCON falls back at the next full refresh.
+
 Data: ISS position from wheretheiss.at; earthquakes from the USGS
 Earthquake Hazards Program feed.
 Maps: Made with Natural Earth. Free vector and raster map data @
@@ -46,7 +51,7 @@ import time
 import micropython
 
 from apps.base_app import BaseApp
-from lib import bitfont, font_mono, font_mono_big, font_thin, net, wifi
+from lib import bitfont, font_mono, font_mono_big, font_mono_huge, font_thin, net, wifi
 from lib.button import UserA, UserB
 from lib.epd import display, display_height, display_width
 from lib.led_bar import leds
@@ -78,6 +83,7 @@ FLIGHT = (7, 12)       # updates per flight: ~20-35 min
 BLAST_STEPS = 2        # updates the blast rings stay after landing
 TRACK_POINTS = 48
 PREROLL = 9            # start mid-exchange, not with an empty board
+LESSON_X = 148         # left edge of the lesson text block (centres the longest line)
 
 # Launch sites / targets are just cities (lon, lat); two fictional sides.
 CITIES = {
@@ -233,6 +239,7 @@ class WoprApp(BaseApp):
         self.maps = {}         # view number -> (black, red) map planes
         self.want_switch = False   # User A pressed: other board next update
         self.want_salvo = False    # User B pressed: salvo at the US next update
+        self.salvo_lands = None    # step the last US-bound salvo lands
 
     # ---- data ---------------------------------------------------------------
 
@@ -271,6 +278,27 @@ class WoprApp(BaseApp):
         for _ in range(n):
             self._launch(random.choice(SIDES[1]), random.choice(USA),
                          0 if now else random.getrandbits(1))
+        lands = max(m[0] + m[1] for m in self.missiles[-n:])
+        self.salvo_lands = max(self.salvo_lands or 0, lands)
+
+    def _draw_lesson(self):
+        """The lesson WOPR learned, in a white panel with a black border over
+        the board; black/white only, so it goes out with the quick refresh
+        (Kevin, 2026-11-07). Red under the panel isn't redrawn by a quick
+        refresh and may show faintly until the next full one."""
+        lines = ("A STRANGE GAME.", "", "THE ONLY WINNING MOVE IS", "NOT TO PLAY.")
+        step = font_mono_huge.HEIGHT + 14
+        x0, y0 = LESSON_X - 40, MAP_Y + 60
+        w, h = display_width - 2 * x0, len(lines) * step + 60
+        display.black.fill_rect(x0, y0, w, h, 0)
+        display.red.fill_rect(x0, y0, w, h, 0)
+        for i in range(3):
+            display.black.rect(x0 + i, y0 + i, w - 2 * i, h - 2 * i, 1)
+        y = y0 + 34
+        for line in lines:
+            if line:
+                bitfont.draw(font_mono_huge, display._framebuffer_black, LESSON_X, y, line)
+            y += step
 
     def _simulate(self):
         """Advance the made-up missiles one update. Returns True if one
@@ -467,6 +495,11 @@ class WoprApp(BaseApp):
             self.want_salvo = False
             self._big_salvo(now=True)
             launched = True
+        lesson = self.salvo_lands is not None and self.step > self.salvo_lands + 1
+        if lesson:              # the US salvo has landed: clear the board
+            self.salvo_lands = None
+            self.missiles = []
+            self.tracks = {}
         now = time.time()
         switched = False
         if self.view_since is None:
@@ -481,7 +514,7 @@ class WoprApp(BaseApp):
         level = _defcon(incoming)
         rising = self.defcon is not None and level < self.defcon
         full = (force_full or self.launched or new_big or switched or rising
-                or self.defcon is None or now - self.last_full >= FULL_S)
+                or self.defcon is None or now - self.last_full >= FULL_S) and not lesson
         if full:
             self.last_full = now
             self.defcon = level
@@ -489,6 +522,9 @@ class WoprApp(BaseApp):
         self._draw_data(view)
         flying = self._draw_missiles(view)
         self._draw_text(view, flying, launched, incoming)
+        if lesson:
+            self._draw_lesson()
+            print("wopr: the only winning move is not to play")
         _red_off_under_black(display._framebuffer_red, display._framebuffer_black, PLANE_BYTES)
         print("wopr: board %d, %d tracks, %d inbound USA, DEFCON %d (now %d), %d quakes, %s refresh" % (
             view.number, len(flying), incoming, self.defcon, level, len(self.quakes),

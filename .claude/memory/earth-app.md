@@ -15,7 +15,11 @@ codes). Two boards alternate every 10 min (full refresh on switch): WORLD
 `font_thin`) and POLAR (`data/earth/polar.png` from
 `tools/make_world_map.py --projection polar`, POLAR_* constants shared;
 streak bundles, track list). User A switches board at once (press
-remembered while the panel is busy); User B launches a big salvo at the US now. Missiles are made up, stored as city-to-city
+remembered while the panel is busy); User B launches a big salvo at the US now. When a US salvo has landed
+(+1 update of blasts) the board clears and the lesson WOPR learned in the
+film (12-word quote, Kevin's request) appears black-on-white in a panel
+over the map with the quick refresh (Kevin: not a full-screen flash);
+`font_mono_huge` (DejaVu Sans Mono Bold 46). B to lesson takes ~30-40 min. Missiles are made up, stored as city-to-city
 flights so tracks carry on across view changes; labels sit at launch points
 (moving labels smeared). DEFCON = missiles in flight to US cities (Kevin);
 ordinary salvos avoid US cities, a big salvo (1 in 10, 4-8 missiles) spikes
