@@ -45,8 +45,8 @@ metadata:
   LED 0). A press longer than ~0.15 s wakes it and acts normally. Logs volts
   and sleep totals to `/data/power.log` every 10 min. Kevin tested it forced
   over USB 2026-11-06: works. Battery life not yet measured.
-- Menu order seen on the badge before Earth/Space Weather were added
-  (Schedule contributes 3 apps): Workshops, Sat Talks, Sun Talks, Gallery,
-  Hello, Nametag, XKCD. It follows the order apps are discovered, not the
-  names, and hasn't been re-checked since — read `switcher.apps` rather than
+- Menu order (LED 0-7, read from the badge 2026-11-06 after Hello was
+  removed): 0 Workshops, 1 Sat Talks, 2 Sun Talks, 3 Earth, 4 Gallery,
+  5 Nametag, 6 Space Weather, 7 XKCD (Schedule contributes 0-2). It follows
+  discovery order, not names; re-check with `switcher.apps` rather than
   assuming; `/data/last_app` (app name) reopens an app without the menu.
