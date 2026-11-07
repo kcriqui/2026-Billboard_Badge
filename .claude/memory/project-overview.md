@@ -18,7 +18,8 @@ it off around the con.
   from design decisions; it is not a repo.
 
 Apps Kevin added (all on the badge and committed as of 2026-11-06; the Hello
-example app was removed 2026-11-06):
+example and the stock Schedule app (Workshops/Sat/Sun Talks) were removed
+2026-11-06):
 XKCD with fast refresh ([[xkcd-app]]),
 handwritten Nametag with two photos ([[nametag]]), Long Exposure Earth
 ([[earth-app]]) and Space Weather ([[spaceweather-app]]). Shared pieces:

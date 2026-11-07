@@ -45,8 +45,9 @@ metadata:
   LED 0). A press longer than ~0.15 s wakes it and acts normally. Logs volts
   and sleep totals to `/data/power.log` every 10 min. Kevin tested it forced
   over USB 2026-11-06: works. Battery life not yet measured.
-- Menu order (LED 0-7, read from the badge 2026-11-06 after Hello was
-  removed): 0 Workshops, 1 Sat Talks, 2 Sun Talks, 3 Earth, 4 Gallery,
-  5 Nametag, 6 Space Weather, 7 XKCD (Schedule contributes 0-2). It follows
+- Menu order (LED #, read from the badge 2026-11-06 after Hello and the
+  stock Schedule app were removed): 0 Earth, 1 Gallery, 2 Nametag,
+  3 Space Weather, 4 XKCD. `/data/app_list` keeps stale entries past the
+  real count (never truncated); nothing reads it. It follows
   discovery order, not names; re-check with `switcher.apps` rather than
   assuming; `/data/last_app` (app name) reopens an app without the menu.
