@@ -20,8 +20,9 @@ it off around the con.
 Apps Kevin added (all on the badge and committed as of 2026-11-06):
 Hello (template example), XKCD with fast refresh ([[xkcd-app]]),
 handwritten Nametag with two photos ([[nametag]]); plus "reopen last app
-after restart" in the app switcher and an LED-bar refresh progress
-indicator for every app.
+after restart" in the app switcher, an LED-bar refresh progress
+indicator for every app, and a battery mode that sleeps between updates
+for any app ([[badge-hardware-firmware]]).
 
 Upstream status (2026-11-06): Hackaday merged PR #10 (boot-42 easter-egg
 fix), removed the PlatformIO drivers (`firmware/esp32s3-itc97*`), and added
