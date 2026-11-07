@@ -3,6 +3,12 @@
 
     python3 tools/make_bitmap_font.py --size 18   # alt text: DejaVu Sans 18 px -> lib/font_alt.py
     python3 tools/make_bitmap_font.py --font F.ttf --size 16 --name font_x
+    python3 tools/make_bitmap_font.py --font .../DejaVuSans-ExtraLight.ttf \
+        --size 44 --name font_thin --dilate      # WOPR banner: even 2 px strokes
+
+--dilate thickens every stroke by one pixel (2x2 square), so a hairline
+font comes out an even 2 px: lone 1 px strokes stay pale after the panel's
+fast refresh, which made hinted thin text look part thin, part thick.
 
 Glyphs are rendered on the laptop with hinting and no anti-aliasing (Pillow
 fontmode "1"), so every stroke lands on whole pixels — crisper on the panel
@@ -15,7 +21,7 @@ Needs Pillow (apt: python3-pil).
 import argparse
 import pathlib
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 FIRST, LAST = 32, 126
@@ -26,6 +32,7 @@ def main():
     ap.add_argument("--font", default="/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
     ap.add_argument("--size", type=int, default=15)
     ap.add_argument("--name", default="font_alt")
+    ap.add_argument("--dilate", action="store_true", help="thicken strokes by 1 px (even 2 px hairlines)")
     args = ap.parse_args()
 
     font = ImageFont.truetype(args.font, args.size)
@@ -40,11 +47,17 @@ def main():
         exact = font.getlength(ch, mode="1")
         adv = round(exact)
         left, _, right, _ = font.getbbox(ch, anchor="ls")
-        w = max(adv, right, 1)
+        w = max(adv, right, 1) + (1 if args.dilate else 0)
         img = Image.new("1", (w, height), 0)
         d = ImageDraw.Draw(img)
         d.fontmode = "1"  # hinted, no anti-aliasing
         d.text((0, ascent), ch, font=font, fill=1, anchor="ls")
+        if args.dilate:
+            g = img.convert("L")
+            out = g
+            for dx, dy in ((1, 0), (0, 1), (1, 1)):
+                out = ImageChops.lighter(out, ImageChops.offset(g, dx, dy))
+            img = out.convert("1")
         row_bytes = (w + 7) // 8
         offsets.append(len(data))
         widths.append(w)

@@ -82,6 +82,7 @@ BIG_SALVO = (4, 8)     # missiles in a big salvo: DEFCON 2 or 1
 FLIGHT = (7, 12)       # updates per flight: ~20-35 min
 BLAST_STEPS = 2        # updates the blast rings stay after landing
 TRACK_POINTS = 48
+LIFT = (0.30, 0.50)    # arc height range (fraction of track length), per missile
 PREROLL = 9            # start mid-exchange, not with an empty board
 LESSON_X = 148         # left edge of the lesson text block (centres the longest line)
 
@@ -156,10 +157,13 @@ class World:
         return True
 
     @staticmethod
-    def track(a, b):
-        """Ballistic-looking arc bulging north by a sixth of its length (a
-        quarter hit the top edge and ran through the Arctic clutter); the
-        short way across the date line."""
+    def track(a, b, lift):
+        """Ballistic-looking arc, high like the film's world screen: the
+        peak sits `lift` (0.3-0.5) of the track's length beyond the higher
+        end - north, or south when the ends average south of the equator.
+        Peaks that would leave the map are squeezed into a band near the
+        edge, still spread by `lift`, so long arcs don't stack up there.
+        The short way across the date line."""
         lon0, lat0 = CITIES[a]
         lon2, lat2 = CITIES[b]
         x0 = (lon0 + 180) * MAP_W / 360
@@ -169,8 +173,19 @@ class World:
         if abs(x2 - x0) > MAP_W / 2:
             x2 += -MAP_W if x2 > x0 else MAP_W
         d = ((x2 - x0) ** 2 + (y2 - y0) ** 2) ** 0.5
+        band = 12 + (LIFT[1] - lift) / (LIFT[1] - LIFT[0]) * 50   # px from the edge
+        if lat0 + lat2 >= 0:
+            peak = min(y0, y2) - lift * d
+            limit = MAP_Y + band
+            if peak < limit:
+                peak = limit
+        else:
+            peak = max(y0, y2) + lift * d
+            limit = MAP_Y + MAP_H - band
+            if peak > limit:
+                peak = limit
         cx = (x0 + x2) / 2
-        cy = max(min(y0, y2) - d / 6, MAP_Y + 40)
+        cy = 2 * peak - (y0 + y2) / 2      # quadratic curve peaks at t = 0.5
         pts = []
         for i in range(TRACK_POINTS + 1):
             t = i / TRACK_POINTS
@@ -195,7 +210,7 @@ class Polar:
         return lat >= POLAR_MIN_LAT
 
     @staticmethod
-    def track(a, b):
+    def track(a, b, lift):
         """Great circle (nearly straight over the pole on this projection)."""
         lon1, lat1 = CITIES[a]
         lon2, lat2 = CITIES[b]
@@ -313,11 +328,23 @@ class WoprApp(BaseApp):
             gc.collect()
         return new_big
 
-    def _launch(self, src, dst, delay, flight=None):
+    def _pick(self, sources, targets):
+        """A launch site and target not already paired in the air (so tracks
+        don't lie on top of each other); gives up after a few tries."""
+        used = [(m[2], m[3]) for m in self.missiles]
+        for _ in range(12):
+            pair = (random.choice(sources), random.choice(targets))
+            if pair not in used:
+                return pair
+        return pair
+
+    def _launch(self, sources, targets, delay, flight=None):
+        src, dst = self._pick(sources, targets)
         if flight is None:
             flight = FLIGHT[0] + random.getrandbits(8) % (FLIGHT[1] - FLIGHT[0] + 1)
+        lift = LIFT[0] + (LIFT[1] - LIFT[0]) * random.getrandbits(8) / 255
         self.missiles.append([self.step + delay, flight, src, dst,
-                              1000 + random.getrandbits(13) % 9000])
+                              1000 + random.getrandbits(13) % 9000, lift])
 
     def _big_salvo(self, now=False):
         """4-8 missiles from the east side at US cities (launched over two
@@ -327,8 +354,8 @@ class WoprApp(BaseApp):
         # and several missiles are close at once: that's when DEFCON hits 1.
         base = FLIGHT[0] + random.getrandbits(8) % (FLIGHT[1] - FLIGHT[0] - 1)
         for _ in range(n):
-            self._launch(random.choice(SIDES[1]), random.choice(USA),
-                         0 if now else random.getrandbits(1), base + random.getrandbits(1))
+            self._launch(SIDES[1], USA, 0 if now else random.getrandbits(1),
+                         base + random.getrandbits(1))
         lands = max(m[0] + m[1] for m in self.missiles[-n:])
         self.salvo_lands = max(self.salvo_lands or 0, lands)
 
@@ -361,7 +388,7 @@ class WoprApp(BaseApp):
             else:
                 for _ in range(random.choice(SALVO_SIZES)):
                     side = random.getrandbits(1)
-                    self._launch(random.choice(SIDES[side]), random.choice(TARGETS[side]),
+                    self._launch(SIDES[side], TARGETS[side],
                                  random.getrandbits(8) % SALVO_EVERY)
         keep = []
         for m in self.missiles:
@@ -388,7 +415,7 @@ class WoprApp(BaseApp):
         key = (view.number, m[4])
         pts = self.tracks.get(key)
         if pts is None:
-            pts = self.tracks[key] = view.track(m[2], m[3])
+            pts = self.tracks[key] = view.track(m[2], m[3], m[5])
         return pts
 
     # ---- drawing --------------------------------------------------------------

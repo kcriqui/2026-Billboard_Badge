@@ -24,7 +24,12 @@ flights so tracks carry on across view changes; labels sit at launch points
 (moving labels smeared). Heads are rotated missile shapes; a faint dotted
 path runs from each head to a dotted circle at its target. Dots are 2x2
 (lone single pixels stayed pale grey in a fast refresh - photo 2026-11-07),
-and world arcs bulge d/6 (d/4 ran along the top edge through the Arctic).
+World arcs peak high like the film: per-missile lift 0.3-0.5 of length,
+peaks past the map edge squeezed into a band spread by lift (no stacking);
+arcs whose ends average south bow south (no southern cities yet). Salvos
+avoid repeating an in-flight launch/target pair. Banner font_thin is
+DejaVu Sans ExtraLight 44 with make_bitmap_font --dilate (even 2 px:
+hinted 1 px strokes went pale in fast refreshes, looked thin/thick).
 `tools/preview_wopr_app.py` renders the app's real drawing code on the
 laptop (framebuf stand-in) - use it for WOPR layout checks. DEFCON = missiles in flight to US cities (Kevin); 1 only when >=3 US-bound
 missiles are within 2 updates of impact (big salvos share a flight time,
