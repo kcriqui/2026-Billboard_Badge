@@ -27,6 +27,10 @@ Kevin asked for bigger).
   (black/white/red) over Floyd-Steinberg, which washed out his face.
   `data/photos/kevin.png` is a laptop-webcam selfie wearing the badge;
   Kevin OK'd committing it to the public repo.
+- `data/photos/kevin_recursive.png`: the same selfie with the photo composited
+  into the badge's own screen 4 levels deep (`tools/make_recursive_photo.py`,
+  then make_photo.py). Compositing beat retaking: a camera shot of dithered
+  e-paper re-dithers into moiré. Kevin keeps both photos in the cycle.
 - Laptop webcam: HP privacy mode makes it send a "camera off" icon until
   Kevin toggles the camera key. Capture with GStreamer (`v4l2src` →
   `jpegenc`/`multifilesink`; no ffmpeg installed), with a mirrored
