@@ -17,21 +17,23 @@ it off around the con.
 - `/mnt/projects/Claude/Supercon 2026` (NAS) only holds preview/comparison PNGs
   from design decisions; it is not a repo.
 
-Apps Kevin added (all on the badge and committed as of 2026-11-06; the Hello
-example and the stock Schedule app (Workshops/Sat/Sun Talks) were removed
-2026-11-06):
-XKCD with fast refresh ([[xkcd-app]]),
-handwritten Nametag with two photos ([[nametag]]), WOPR (was Long Exposure Earth)
-([[earth-app]]) and Space Weather ([[spaceweather-app]]). Shared pieces:
-"reopen last app after restart" in the app switcher, an LED-bar refresh
-progress indicator for every app, a battery mode that sleeps between updates
-for any app, crisp 1-bit bitmap fonts (`lib/bitfont`, made in a parallel
-session) and a shared HTTPS helper `lib/net.py` ([[badge-hardware-firmware]]).
+Apps on the badge (all committed, as of 2026-11-07; the Hello example and
+the stock Schedule app were removed): Gallery (stock), XKCD with fast
+refresh and licence credit ([[xkcd-app]]), handwritten Nametag with two
+photos ([[nametag]]), Space Weather ([[spaceweather-app]]) and WOPR, a
+WarGames-style war room (was Long Exposure Earth; [[earth-app]]).
+Shared pieces: "reopen last app after restart" and a 10 s menu timeout in
+the app switcher, an LED-bar refresh progress indicator for every app, a
+battery mode that sleeps between updates for any app, crisp 1-bit bitmap
+fonts (`lib/bitfont`), a shared HTTPS helper `lib/net.py`, multi-network
+WiFi in b/g mode ([[badge-hardware-firmware]]), and an OLED on the SAO bus
+showing menu names + WiFi/battery ([[oled]]).
 **Open issue (Kevin, 2026-11-06): Space Weather's red fades between full
 refreshes — improved, needs more attention later** ([[spaceweather-app]]).
 Still to build from the ideas list: #4 sky clock (moon/sun/planets computed
 on the badge), the mic seismograph once the mic is soldered, a QR code in
-Nametag, "Now & Next" schedule, sharing apps via upstream `user_apps/`.
+Nametag, Game of Life on the OLED (Kevin: hold off), sharing apps via
+upstream `user_apps/`. Decided against: OTA updates (Kevin prefers USB).
 
 Upstream status (checked 2026-11-06 evening; 12 PRs open): Hackaday merged PR #10 (boot-42 easter-egg
 fix), removed the PlatformIO drivers (`firmware/esp32s3-itc97*`), and added

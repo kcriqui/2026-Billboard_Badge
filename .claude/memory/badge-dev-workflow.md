@@ -6,8 +6,14 @@ metadata:
 ---
 
 - Badge port: `/dev/serial/by-id/usb-Espressif_Systems_Espressif_Device_7c4fad28cf74cb3f-if00`
-  (USB 303a:4001, usually ttyACM0). A Feather (USB-JTAG 303a:1001, ttyACM1) is
-  often plugged in too — never target it by accident.
+  (USB 303a:4001). The ttyACM number changes (seen as ACM0 and ACM1 on
+  2026-11-07), so always use the by-id path. A Feather (USB-JTAG
+  303a:1001) is often plugged in too — never target it by accident.
+- If the badge vanishes from USB (no /dev/serial/by-id entry), it's
+  unplugged or in battery-mode light sleep: ask Kevin to plug in / press
+  RESET.
+- Laptop gotcha: `pkill -f <pattern>` also kills the shell running it when
+  the pattern is in its own command line; kill by PID instead.
 - Deploy: `cd firmware && ./dev.sh push` (copies only changed files from
   `badge/`, resets, shows output). `dev.sh` auto-picks the badge port.
   `scripts/update.py` takes `--port`/`$BADGE_PORT` and never overwrites

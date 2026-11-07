@@ -6,7 +6,7 @@ metadata:
 ---
 
 Shows a random xkcd every 5 minutes; User A fetches one now. Works fully on
-the badge (no laptop needed) when the `Supercon` WiFi is in range.
+the badge (no laptop needed) on any WiFi in `wifi.json` that's in range.
 
 - **Scaling is hybrid** (`lib/fit_png.py`): shrinking → area-average + bold
   threshold 200; enlarging (most comics) → cut at 170 (strong colours 128),
@@ -29,8 +29,9 @@ the badge (no laptop needed) when the `Supercon` WiFi is in range.
 - Own HTTPS client in `apps/xkcd.py` — see [[badge-gotchas]] (requests crash).
   Newer apps use the shared copy in `lib/net.py`; XKCD keeps its own because
   it raises SkipComic.
-- WiFi credentials: `firmware/badge/data/wifi.json` (gitignored; Kevin writes
-  it — never handle the password). Template: `wifi.json.example`.
+- WiFi credentials: `firmware/badge/data/wifi.json` (gitignored; a list of
+  networks; see [[badge-dev-workflow]] for `tools/add_wifi.py`). Template:
+  `wifi.json.example`.
 - Debug log on flash: `/data/xkcd.log` (fresh per launch, capped at 8 KB).
 - Show a specific comic next: write its number to `/data/xkcd_next` (with
   `with open`), it is used once and deleted.

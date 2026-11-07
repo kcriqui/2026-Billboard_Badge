@@ -13,8 +13,12 @@ metadata:
 - Crisp text: prefer `lib/bitfont.py` + 1-bit fonts over LVGL fonts (which
   are anti-aliased and look uneven once thresholded). Fonts: `font_small`
   (DejaVu Sans 12), `font_alt` (18, XKCD alt text — Kevin asked for bigger
-  than 15), `font_big` (Bold 24). Make more with `tools/make_bitmap_font.py`.
-  Draws into the black framebuffer only; keeps a 1/16 px pen for even spacing.
+  than 15), `font_big` (Bold 24); WOPR's `font_mono`, `font_mono_big`,
+  `font_mono_huge`, `font_thin`; the OLED's `font_oled_{big,mid,small}`.
+  Make more with `tools/make_bitmap_font.py`; `--stroke N` redraws glyphs as
+  an N px pen along their centreline (even stroke width, vector-display
+  look; hinted thin fonts mix 1/2 px strokes). Draws into the black
+  framebuffer only; keeps a 1/16 px pen for even spacing.
 - LVGL fonts actually compiled in: montserrat 14, 16, 24, 28, 32, 36, 40, 44, 48.
   The repo's lv_conf.h lists more (e.g. 18) but they are NOT in the build.
 - Full refresh = the panel's own (OTP) waveform, ~35 s of it physical.
@@ -54,8 +58,5 @@ metadata:
 - Menu timeout (2026-11-07): a menu opened from a running app closes after
   `MENU_TIMEOUT_MS` (10 s) without Menu +/-, back to that app un-relaunched
   (`lib/app_switcher.py`). The boot-time menu doesn't time out.
-
-- Bitmap fonts with even stroke width: `tools/make_bitmap_font.py --stroke N`
-  redraws glyphs as an N px pen along their centreline (vector-display look;
-  hinted thin fonts mix 1/2 px strokes, which also look uneven after fast
-  refreshes). Used for WOPR's banner `font_thin`.
+- WiFi joins in 802.11b/g only (`lib/wifi.py`; see [[badge-gotchas]]).
+- Optional OLED on the SAO I2C bus shows menu names + status ([[oled]]).

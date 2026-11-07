@@ -41,10 +41,14 @@ metadata:
   pulse per fast refresh; narrower dithered rims (higher red span); keep
   black dots out of a margin around red; a custom fast LUT that leaves
   white pixels undriven (no 0x99 shake) — needs care, paper-white quality.
-  Then relax the 15-min top-up if possible. Earth's thin red coastlines may
+  Then relax the 15-min top-up if possible. WOPR's thin red coastlines may
   fade the same way (not checked).
 - Preview/tune on the laptop: `python3 tools/preview_plasma.py` (badge code,
   live NOAA data + a storm + simulated ghosts, prints coverage).
+- Update log on flash: `/data/spaceweather.log` (one line per update or
+  failure; the only record while battery mode sleeps). A forced-battery test
+  of whether updates keep running asleep was dropped (Kevin: "I think it's
+  OK"); code review found nothing blocking.
 - Small caption (bitmap `font_small`) with the numbers + "data: NOAA SWPC";
   User B toggles it (forces a full refresh). User A = update now.
 - Feeds: `/products/summary/solar-wind-speed.json` and `-mag-field.json`

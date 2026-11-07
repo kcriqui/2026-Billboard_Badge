@@ -1,10 +1,10 @@
 - [Project overview](project-overview.md) — repos, remotes, what's built, upstream PR status, parked mic idea
 - [Working with Kevin](working-with-kevin.md) — previews before choices, tests on hardware, push often, credit sources, generative art
 - [Badge hardware & firmware](badge-hardware-firmware.md) — MicroPython 1.24.1/LVGL 9.3, real font list, full/fast refresh timings, LED overlay, power
-- [Badge dev workflow](badge-dev-workflow.md) — badge port, dev.sh push, safe REPL inspection, laptop previews, shared checkout
-- [Badge gotchas](badge-gotchas.md) — LVGL re-init hang, USB freezes, requests crash, lost writes
+- [Badge dev workflow](badge-dev-workflow.md) — badge port, dev.sh push, WiFi list + add_wifi, no OTA, safe REPL inspection, laptop previews, shared checkout
+- [Badge gotchas](badge-gotchas.md) — LVGL re-init hang, USB freezes, requests crash, lost writes, WiFi b/g fix, fast refresh vs 1 px lines
 - [XKCD app](xkcd-app.md) — hybrid scaling (no dithering), WiFi file, log, xkcd_next
 - [Nametag](nametag.md) — name tag + photos (A/B), xkcd Script "Kevin", make_nametag/make_photo tools
-- [WOPR / Earth app](earth-app.md) — WarGames-style war room: made-up missiles, world/polar boards, DEFCON, ISS + quakes, ghosting, attribution
+- [WOPR / Earth app](earth-app.md) — WarGames-style war room: made-up missiles, world/polar boards, DEFCON, lesson, ISS + quakes, attribution
 - [Space Weather app](spaceweather-app.md) — dithered plasma driven by NOAA solar wind; layers, refresh, feeds
 - [OLED](oled.md) — #326 OLED on SAO I2C (0x3D) for menu/status/idle; dead rows from cracked corner

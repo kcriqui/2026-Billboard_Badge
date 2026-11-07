@@ -36,14 +36,14 @@ metadata:
 - **mpremote auto-connect** may pick the Feather — always pass the badge port.
 - WiFi SSIDs are case-sensitive on the ESP32 (con network is `Supercon`);
   `lib/wifi.py` matches case-insensitively to avoid this trap.
-
 - **OSError 116 (timeout) on some WiFi while small requests work** (ACCD
   venue WiFi, -77 dBm, 2026-11-07): TCP connects and tiny replies arrived,
   but anything over ~1 packet stalled, even plain HTTP; the laptop on the
   same network was fine and WiFi power-save made no difference. Fix: the
   badge now joins in 802.11b/g only (`lib/wifi.py`, `protocol=MODE_11B|MODE_11G`).
   If downloads stall somewhere new, check that first.
-
 - **Fast refresh doesn't darken lone single pixels** (WOPR's 1-px dotted
   paths came out pale grey or invisible, 2026-11-07). Use 2x2 dots or
-  thicker for anything that must show after a fast black-only refresh.
+  thicker for anything that must show after a fast black-only refresh;
+  the same made hinted thin fonts look part thin, part thick (fix:
+  `make_bitmap_font --stroke 2`).
