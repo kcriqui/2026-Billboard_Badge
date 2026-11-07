@@ -52,6 +52,14 @@ def connect(timeout_s: int = 20) -> str:
         return _wlan.ifconfig()[0]
     nets = _networks()
     _wlan.active(True)
+    # 802.11b/g only: on the ACCD venue WiFi (weak signal, 802.11n) every
+    # response bigger than one packet stalled (OSError 116) while the laptop
+    # was fine; b/g fixed it (2026-11-07). 54 Mbps is plenty for the badge.
+    try:
+        if _wlan.config("protocol") != network.MODE_11B | network.MODE_11G:
+            _wlan.config(protocol=network.MODE_11B | network.MODE_11G)
+    except Exception as ex:
+        print("wifi: can't set b/g mode:", ex)
     # SSID -> name as broadcast. Matching ignores case ("supercon" finds
     # "Supercon"), but the join uses the exact broadcast name.
     visible = {}

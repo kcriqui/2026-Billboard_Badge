@@ -36,3 +36,10 @@ metadata:
 - **mpremote auto-connect** may pick the Feather — always pass the badge port.
 - WiFi SSIDs are case-sensitive on the ESP32 (con network is `Supercon`);
   `lib/wifi.py` matches case-insensitively to avoid this trap.
+
+- **OSError 116 (timeout) on some WiFi while small requests work** (ACCD
+  venue WiFi, -77 dBm, 2026-11-07): TCP connects and tiny replies arrived,
+  but anything over ~1 packet stalled, even plain HTTP; the laptop on the
+  same network was fine and WiFi power-save made no difference. Fix: the
+  badge now joins in 802.11b/g only (`lib/wifi.py`, `protocol=MODE_11B|MODE_11G`).
+  If downloads stall somewhere new, check that first.
