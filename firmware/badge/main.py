@@ -58,6 +58,12 @@ async def main():
     # Battery mode: sleeps between display updates when on battery (lib/power.py).
     from lib.power import power
     _power_task = aio.create_task(power.run(display))
+    # Optional OLED on the SAO bus: app names in the menu, WiFi/battery (lib/oled.py).
+    try:
+        from lib.oled import oled
+        _oled_task = aio.create_task(oled.run(switcher))
+    except Exception as ex:
+        print("oled: not started:", repr(ex))
 
     print("Running main loop...")
     while True:
