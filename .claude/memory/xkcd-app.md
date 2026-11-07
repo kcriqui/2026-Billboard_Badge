@@ -39,6 +39,10 @@ the badge (no laptop needed) when the `Supercon` WiFi is in range.
   hold it). Side-by-side photos of #871 (2026-11-06): fast vs full look the
   same — fast blacks are, if anything, more neutral (full has a faint brown
   tint in solid areas); no visible ghosting after one fast update.
+- Layout: alt text in `font_alt` (bitfont), fully shown; the comic is fitted
+  into the space left and placed right under the title (short comics move
+  up, tall ones shrink), dropping alt lines only if the comic would go
+  below MIN_SCALE.
 - Timing on badge: download ~0.5-3 s, convert + readability ~1.3-1.9 s,
   LVGL text ~0.2 s, then
   the panel: ~36 s full (measured), ~5 s fast (Kevin confirmed on the badge,

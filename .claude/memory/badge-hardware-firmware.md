@@ -10,6 +10,11 @@ metadata:
 - Firmware on the badge: MicroPython 1.24.1 + LVGL 9.3, custom build
   ("Billboard Badge Generic ESP32S3"). `requests`, `ssl`, `deflate`, `network`
   are built in.
+- Crisp text: prefer `lib/bitfont.py` + 1-bit fonts over LVGL fonts (which
+  are anti-aliased and look uneven once thresholded). Fonts: `font_small`
+  (DejaVu Sans 12), `font_alt` (18, XKCD alt text — Kevin asked for bigger
+  than 15), `font_big` (Bold 24). Make more with `tools/make_bitmap_font.py`.
+  Draws into the black framebuffer only; keeps a 1/16 px pen for even spacing.
 - LVGL fonts actually compiled in: montserrat 14, 16, 24, 28, 32, 36, 40, 44, 48.
   The repo's lv_conf.h lists more (e.g. 18) but they are NOT in the build.
 - Full refresh = the panel's own (OTP) waveform, ~35 s of it physical.
