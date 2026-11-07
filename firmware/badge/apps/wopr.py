@@ -26,7 +26,7 @@ M2.5+, past day) every QUAKE_S.
 
 Refresh: fast with keep_red (red map untouched) between full refreshes; full
 on launch, view change, rising DEFCON, a new M6+ quake, and every FULL_S.
-User A: update now. User B: full refresh now (wipe the ghosts).
+User A or User B: switch to the other board now (fresh data, full refresh).
 
 Data: ISS position from wheretheiss.at; earthquakes from the USGS
 Earthquake Hazards Program feed.
@@ -230,6 +230,7 @@ class WoprApp(BaseApp):
         self.view = 0          # index into VIEWS
         self.view_since = None
         self.maps = {}         # view number -> (black, red) map planes
+        self.want_switch = False   # User A/B pressed: other board next update
 
     # ---- data ---------------------------------------------------------------
 
@@ -458,10 +459,11 @@ class WoprApp(BaseApp):
         switched = False
         if self.view_since is None:
             self.view_since = now
-        elif now - self.view_since >= VIEW_S:
+        elif self.want_switch or now - self.view_since >= VIEW_S:
             self.view = (self.view + 1) % len(VIEWS)
             self.view_since = now
             switched = True
+        self.want_switch = False
         view = VIEWS[self.view]
         incoming = self._incoming_usa()
         level = _defcon(incoming)
@@ -486,7 +488,7 @@ class WoprApp(BaseApp):
     def run(self):
         if self.launched or time.time() >= self.next_update:
             self._update()
-        elif UserA.pressed():
-            self._update()
-        elif UserB.pressed():
-            self._update(force_full=True)
+        elif UserA.pressed() or UserB.pressed():
+            # Remembered if the panel is still busy: switches when it's free.
+            self.want_switch = True
+            self.next_update = 0        # the switch itself forces a full refresh
