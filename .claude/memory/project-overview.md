@@ -25,6 +25,8 @@ handwritten Nametag with two photos ([[nametag]]), Long Exposure Earth
 progress indicator for every app, a battery mode that sleeps between updates
 for any app, crisp 1-bit bitmap fonts (`lib/bitfont`, made in a parallel
 session) and a shared HTTPS helper `lib/net.py` ([[badge-hardware-firmware]]).
+**Open issue (Kevin, 2026-11-06): Space Weather's red fades between full
+refreshes — improved, needs more attention later** ([[spaceweather-app]]).
 Still to build from the ideas list: #4 sky clock (moon/sun/planets computed
 on the badge), the mic seismograph once the mic is soldered, a QR code in
 Nametag, "Now & Next" schedule, sharing apps via upstream `user_apps/`.

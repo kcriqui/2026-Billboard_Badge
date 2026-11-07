@@ -36,8 +36,15 @@ metadata:
   `FAST_PASSES = 2` — "a little better". Then option C, Kevin's variant:
   red as **solid blobs with dithered fading rims** (red span 2200, lo
   -1330 + 20*Kp; calm ~21 % red, storm ~43 %); black/white stay dithered.
-  Solid cores should resist fading; judge on the panel, then maybe relax
-  the 15-min top-up. Earth's thin red coastlines may fade the same way.
+  Kevin: "better" — **OPEN, needs more attention later** (he asked to note
+  it): red still fades somewhat between top-ups. Ideas not yet tried: 1
+  pulse per fast refresh; narrower dithered rims (higher red span); keep
+  black dots out of a margin around red; a custom fast LUT that leaves
+  white pixels undriven (no 0x99 shake) — needs care, paper-white quality.
+  Then relax the 15-min top-up if possible. Earth's thin red coastlines may
+  fade the same way (not checked).
+- Preview/tune on the laptop: `python3 tools/preview_plasma.py` (badge code,
+  live NOAA data + a storm + simulated ghosts, prints coverage).
 - Small caption (bitmap `font_small`) with the numbers + "data: NOAA SWPC";
   User B toggles it (forces a full refresh). User A = update now.
 - Feeds: `/products/summary/solar-wind-speed.json` and `-mag-field.json`
