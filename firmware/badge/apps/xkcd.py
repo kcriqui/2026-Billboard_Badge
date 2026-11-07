@@ -21,7 +21,7 @@ import ssl
 import lvgl
 
 from apps.base_app import BaseApp
-from lib import fit_png, wifi
+from lib import bitfont, fit_png, font_alt, wifi
 from lib.button import UserA, UserB
 from lib.epd import display, display_height, display_width
 from lib.led_bar import leds
@@ -177,8 +177,6 @@ class XkcdApp(BaseApp):
         self.latest = 0
         self._scr = None
         self._header = None
-        self._footer = None
-        self._alt = None
         self._fast_in_a_row = 0
         self._prev_had_red = True  # unknown screen contents: assume red
 
@@ -243,45 +241,32 @@ class XkcdApp(BaseApp):
         title.set_style_text_font(lvgl.font_montserrat_28, 0)
         title.set_style_text_color(_BLACK, 0)
 
-        footer = lvgl.obj(scr)
-        footer.remove_style_all()
-        footer.set_style_bg_color(_WHITE, 0)
-        footer.set_style_bg_opa(lvgl.OPA.COVER, 0)
-        alt = lvgl.label(footer)
-        alt.set_width(display_width - 2 * MARGIN)
-        alt.set_pos(MARGIN, 4)
-        alt.set_style_text_font(lvgl.font_montserrat_16, 0)
-        alt.set_style_text_color(_BLACK, 0)
-
         self._scr, self._header, self._title = scr, header, title
-        self._footer, self._alt = footer, alt
 
     def _render_text(self, title, alt=None, alt_top=0):
-        """Draw the header (and alt text below alt_top) through LVGL.
+        """Draw the alt text (below alt_top) and the title.
 
-        Only the header/footer areas are flushed, so the comic already in the
-        framebuffer stays untouched.
+        The alt text uses the 1-bit bitmap font (lib/font_alt.py, DejaVu Sans
+        15 px rendered on the laptop), drawn straight into the framebuffer:
+        crisp on the panel, unlike LVGL's anti-aliased fonts. The title still
+        goes through LVGL; only the header area is flushed, so the comic and
+        the alt text stay untouched.
         """
+        if alt and display_height - alt_top >= FOOTER_MIN_H:
+            w = display_width - 2 * MARGIN
+            lines = []
+            for para in alt.split("\n"):
+                lines += bitfont.wrap(font_alt, para, w)
+            room = display_height - MARGIN - (alt_top + 2)
+            max_lines = max(1, (room + 2) // (font_alt.HEIGHT + 2))
+            bitfont.draw_lines(font_alt, display._framebuffer_black, lines,
+                               MARGIN, alt_top + 2, w, max_lines)
         self._ensure_screen()
         self._title.set_text(title)
-        show_alt = bool(alt) and display_height - alt_top >= FOOTER_MIN_H
-        if show_alt:
-            room = display_height - alt_top
-            self._footer.set_pos(0, alt_top)
-            self._footer.set_size(display_width, room)
-            self._alt.set_text(alt)
-            self._footer.remove_flag(lvgl.obj.FLAG.HIDDEN)
-            # Shrink the footer to the text: every flushed pixel costs time.
-            self._scr.update_layout()
-            self._footer.set_height(min(room, self._alt.get_height() + 8))
-        else:
-            self._footer.add_flag(lvgl.obj.FLAG.HIDDEN)
         lvgl.screen_load(self._scr)
         self._scr.update_layout()
         display.lv_display.inv_p = 0  # drop the full-screen invalidation
         self._header.invalidate()
-        if show_alt:
-            self._footer.invalidate()
         lvgl.refr_now(display.lv_display)
 
     def _message(self, title, text):
