@@ -46,13 +46,13 @@ class FrameBuffer:
     def pixel(self, x, y, c=None):
         if not (0 <= x < self.w and 0 <= y < self.h):
             return 0
-        i = y * self.w + x
+        i, bit = y * ((self.w + 7) // 8) + (x >> 3), 0x80 >> (x & 7)   # rows padded to bytes
         if c is None:
-            return (self.buf[i >> 3] >> (7 - (i & 7))) & 1
+            return 1 if self.buf[i] & bit else 0
         if c:
-            self.buf[i >> 3] |= 0x80 >> (i & 7)
+            self.buf[i] |= bit
         else:
-            self.buf[i >> 3] &= ~(0x80 >> (i & 7)) & 0xFF
+            self.buf[i] &= ~bit & 0xFF
 
     def fill(self, c):
         for i in range(len(self.buf)):
@@ -89,6 +89,14 @@ class FrameBuffer:
         for k in range(n):
             a = 2 * math.pi * k / n
             self.pixel(round(x + xr * math.cos(a)), round(y + yr * math.sin(a)), c)
+
+    def blit(self, src, x, y, key=-1, palette=None):
+        for sy in range(src.h):
+            for sx in range(src.w):
+                col = src.pixel(sx, sy)
+                if col == key:
+                    continue
+                self.pixel(x + sx, y + sy, palette.pixel(col, 0) if palette else col)
 
     def poly(self, x, y, coords, c, f=False):
         pts = [(x + coords[i], y + coords[i + 1]) for i in range(0, len(coords), 2)]

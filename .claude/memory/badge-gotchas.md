@@ -42,8 +42,10 @@ metadata:
   same network was fine and WiFi power-save made no difference. Fix: the
   badge now joins in 802.11b/g only (`lib/wifi.py`, `protocol=MODE_11B|MODE_11G`).
   If downloads stall somewhere new, check that first.
-- **Fast refresh doesn't darken lone single pixels** (WOPR's 1-px dotted
-  paths came out pale grey or invisible, 2026-11-07). Use 2x2 dots or
-  thicker for anything that must show after a fast black-only refresh;
-  the same made hinted thin fonts look part thin, part thick (fix:
+- **Fast refresh doesn't darken isolated single pixels** (WOPR's 1-px
+  dotted paths, a dot every 7 px, came out pale grey or invisible,
+  2026-11-07): use 2x2 dots for sparse marks. Connected 1 px lines are
+  fine — Kevin: "single pixel wide fonts seem to be OK" — and so is 1 px
+  dithering inside a shape (mushroom clouds). WOPR's banner looked uneven
+  for a different reason: hinting mixed 1 and 2 px strokes (fix:
   `make_bitmap_font --stroke 2`).

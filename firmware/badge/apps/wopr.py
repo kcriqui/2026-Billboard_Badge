@@ -51,7 +51,10 @@ import time
 import micropython
 
 from apps.base_app import BaseApp
+import framebuf
+
 from lib import bitfont, font_mono, font_mono_big, font_mono_huge, font_thin, net, wifi
+from lib import sprite_mushroom
 from lib.button import UserA, UserB
 from lib.epd import display, display_height, display_width
 from lib.led_bar import leds
@@ -274,6 +277,25 @@ def _missile(fb, x, y, dx, dy):
         coords.append(int(round(px * c - py * s)))
         coords.append(int(round(px * s + py * c)))
     fb.poly(x, y, coords, 1, True)
+
+
+_CLEAR = framebuf.FrameBuffer(bytearray(1), 2, 1, framebuf.MONO_HLSB)  # palette: 1 -> 0
+_SPRITES = {}
+
+
+def _mushroom(x, y, stage):
+    """Mushroom cloud rising from (x, y) (tools/make_mushroom.py): its
+    silhouette cleared to white on both planes, then its black pixels."""
+    sp = _SPRITES.get(stage)
+    if sp is None:
+        w, h, ax, ay, mask, ink = sprite_mushroom.STAGES[stage]
+        fmt = framebuf.MONO_HLSB
+        sp = _SPRITES[stage] = (ax, ay, framebuf.FrameBuffer(bytearray(mask), w, h, fmt),
+                                framebuf.FrameBuffer(bytearray(ink), w, h, fmt))
+    ax, ay, mask, ink = sp
+    display.black.blit(mask, x - ax, y - ay, 0, _CLEAR)
+    display.red.blit(mask, x - ax, y - ay, 0, _CLEAR)
+    display.black.blit(ink, x - ax, y - ay, 0)
 
 
 def _ring(x, y, r):
@@ -503,8 +525,7 @@ class WoprApp(BaseApp):
                 flying.append((m[4], _side_name(m[2])))
             elif pts[-1]:
                 x, y = pts[-1]
-                for r in range(8, 8 + 10 * (age - m[1]) + 1, 10):
-                    _ring(x, y, r)
+                _mushroom(x, y, min(age - m[1], 2))   # explosion (Kevin, 2026-11-07)
         return flying
 
     def _draw_data(self, view):

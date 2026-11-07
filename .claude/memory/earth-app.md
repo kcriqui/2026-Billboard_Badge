@@ -38,9 +38,14 @@ Flights take 7-12 updates (3 min each). PREROLL starts mid-exchange.
 
 **Drawing:** heads are rotated missile shapes; a faint dotted path (2x2
 dots — 1 px went pale in fast refreshes) from each head to a dotted target
-circle; track id at the launch point (moving labels smeared); blast rings
-for 2 updates after impact; then the track stops being drawn and ghosts
-away. World arcs peak high like the film: lift 0.5-0.8 × east-west distance
+circle; track id at the launch point (moving labels smeared). Impact =
+mushroom cloud (Kevin, 2026-11-07), young 32 px on the 1st update, full
+48 px on the 2nd, rising from the target: sprites in
+`lib/sprite_mushroom.py` made by `tools/make_mushroom.py` (billows lit
+like spheres, modelled on Wikipedia test-shot photos; Atkinson dither at
+1 px — Kevin rejected 2x2 cells and the first, double size). Silhouette
+cleared to white on both planes (framebuf.blit with a 1->0 palette), ink
+on top. Then the track stops being drawn and ghosts away. World arcs peak high like the film: lift 0.5-0.8 × east-west distance
 (full length made north-south routes hook back), peaks past the edge
 squeezed into a band spread by lift; routes averaging south bow south. A
 final pass clears red under all black (black + red = undriven pixel).
