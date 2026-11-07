@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render a TrueType font into a 1-bit bitmap font module for the badge.
 
-    python3 tools/make_bitmap_font.py            # DejaVu Sans 15 px -> lib/font_alt.py
+    python3 tools/make_bitmap_font.py --size 18   # alt text: DejaVu Sans 18 px -> lib/font_alt.py
     python3 tools/make_bitmap_font.py --font F.ttf --size 16 --name font_x
 
 Glyphs are rendered on the laptop with hinting and no anti-aliasing (Pillow
