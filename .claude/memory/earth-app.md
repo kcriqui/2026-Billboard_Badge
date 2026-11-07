@@ -14,8 +14,8 @@ codes). Two boards alternate every 10 min (full refresh on switch): WORLD
 (dashed arcs, big "MISSILE WARNING"/"LAUNCH DETECTION" banner in
 `font_thin`) and POLAR (`data/earth/polar.png` from
 `tools/make_world_map.py --projection polar`, POLAR_* constants shared;
-streak bundles, track list). User A or B switches board at once (press
-remembered while the panel is busy). Missiles are made up, stored as city-to-city
+streak bundles, track list). User A switches board at once (press
+remembered while the panel is busy); User B launches a big salvo at the US now. Missiles are made up, stored as city-to-city
 flights so tracks carry on across view changes; labels sit at launch points
 (moving labels smeared). DEFCON = missiles in flight to US cities (Kevin);
 ordinary salvos avoid US cities, a big salvo (1 in 10, 4-8 missiles) spikes

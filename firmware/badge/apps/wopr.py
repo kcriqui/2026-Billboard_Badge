@@ -26,7 +26,8 @@ M2.5+, past day) every QUAKE_S.
 
 Refresh: fast with keep_red (red map untouched) between full refreshes; full
 on launch, view change, rising DEFCON, a new M6+ quake, and every FULL_S.
-User A or User B: switch to the other board now (fresh data, full refresh).
+User A: switch to the other board now (fresh data, full refresh).
+User B: launch a big salvo at US cities now (DEFCON goes up).
 
 Data: ISS position from wheretheiss.at; earthquakes from the USGS
 Earthquake Hazards Program feed.
@@ -230,7 +231,8 @@ class WoprApp(BaseApp):
         self.view = 0          # index into VIEWS
         self.view_since = None
         self.maps = {}         # view number -> (black, red) map planes
-        self.want_switch = False   # User A/B pressed: other board next update
+        self.want_switch = False   # User A pressed: other board next update
+        self.want_salvo = False    # User B pressed: salvo at the US next update
 
     # ---- data ---------------------------------------------------------------
 
@@ -262,15 +264,21 @@ class WoprApp(BaseApp):
         self.missiles.append([self.step + delay, flight, src, dst,
                               1000 + random.getrandbits(13) % 9000])
 
+    def _big_salvo(self, now=False):
+        """4-8 missiles from the east side at US cities (spread over two
+        updates, or all at once when `now`)."""
+        n = BIG_SALVO[0] + random.getrandbits(8) % (BIG_SALVO[1] - BIG_SALVO[0] + 1)
+        for _ in range(n):
+            self._launch(random.choice(SIDES[1]), random.choice(USA),
+                         0 if now else random.getrandbits(1))
+
     def _simulate(self):
         """Advance the made-up missiles one update. Returns True if one
         launched this step."""
         self.step += 1
         if self.step % SALVO_EVERY == 1:
             if random.getrandbits(8) % BIG_SALVO_ODDS == 0:   # big one at the US
-                n = BIG_SALVO[0] + random.getrandbits(8) % (BIG_SALVO[1] - BIG_SALVO[0] + 1)
-                for _ in range(n):
-                    self._launch(random.choice(SIDES[1]), random.choice(USA), random.getrandbits(1))
+                self._big_salvo()
             else:
                 for _ in range(random.choice(SALVO_SIZES)):
                     side = random.getrandbits(1)
@@ -455,6 +463,10 @@ class WoprApp(BaseApp):
             for _ in range(PREROLL):
                 self._simulate()
         launched = self._simulate()
+        if self.want_salvo:     # User B
+            self.want_salvo = False
+            self._big_salvo(now=True)
+            launched = True
         now = time.time()
         switched = False
         if self.view_since is None:
@@ -488,7 +500,10 @@ class WoprApp(BaseApp):
     def run(self):
         if self.launched or time.time() >= self.next_update:
             self._update()
-        elif UserA.pressed() or UserB.pressed():
+        elif UserA.pressed():
             # Remembered if the panel is still busy: switches when it's free.
             self.want_switch = True
             self.next_update = 0        # the switch itself forces a full refresh
+        elif UserB.pressed():
+            self.want_salvo = True      # rising DEFCON forces a full refresh
+            self.next_update = 0
