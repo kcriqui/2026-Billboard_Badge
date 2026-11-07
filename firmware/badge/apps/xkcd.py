@@ -277,12 +277,34 @@ class XkcdApp(BaseApp):
         self._render_text(title, text, HEADER_H + MARGIN)
         display.update()
 
+    def _comic_box(self, png, alt):
+        """Comic area that leaves room for the whole alt text below it.
+
+        The box is exactly as tall as the fitted comic, so short comics sit
+        right under the title and tall ones shrink to make room. If showing
+        all the text would shrink the comic below MIN_SCALE, drop text lines
+        (draw_lines then ends with "...") until it doesn't.
+        """
+        box_w, full_h = self._box(0)
+        w, h = fit_png.png_size(png)
+        lines = 0
+        if alt:
+            for para in alt.split("\n"):
+                lines += len(bitfont.wrap(font_alt, para, box_w))
+        line_h = font_alt.HEIGHT + 2
+        while True:
+            text_h = lines * line_h + 2 * MARGIN if lines else 0
+            fw, fh = fit_png.fit_size(w, h, box_w, full_h - text_h)
+            if lines == 0 or (fw >= w * MIN_SCALE and full_h - text_h >= 60):
+                return box_w, fh
+            lines -= 1
+
     def _show(self, info, png, check=True):
         """Draw and refresh. Returns False (nothing refreshed) if `check` and
         the drawn comic is too small/busy to read on the panel."""
         display.clear()
         top = HEADER_H + MARGIN
-        box_w, box_h = self._box(0)
+        box_w, box_h = self._comic_box(png, info.get("alt"))
         t = time.ticks_ms()
         log("drawing #%d" % info["num"], fit_png.png_size(png))
         _, y, _, h = fit_png.draw_fit(
