@@ -17,5 +17,6 @@
 - [xkcd-app](.claude/memory/xkcd-app.md) — XKCD app design decisions
 - [nametag](.claude/memory/nametag.md) — name tag + photos, choices and regeneration
 - [earth-app](.claude/memory/earth-app.md) — Long Exposure Earth design, data sources, attribution
+- [spaceweather-app](.claude/memory/spaceweather-app.md) — dithered plasma driven by NOAA space weather
 
 Keep these files current: update or delete stale facts rather than appending.

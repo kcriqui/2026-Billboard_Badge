@@ -6,3 +6,4 @@
 - [XKCD app](xkcd-app.md) — hybrid scaling (no dithering), WiFi file, log, xkcd_next
 - [Nametag](nametag.md) — name tag + photos (A/B), xkcd Script "Kevin", make_nametag/make_photo tools
 - [Earth app](earth-app.md) — ISS + quakes "long exposure" map, ghosting design, attribution rules, next ideas
+- [Space Weather app](spaceweather-app.md) — dithered plasma driven by NOAA solar wind; layers, refresh, feeds

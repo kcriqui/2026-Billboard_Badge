@@ -25,5 +25,5 @@ metadata:
   command in the tool's docstring).
 - Not yet observed: how the real ghosting looks after an orbit of fast
   refreshes. Shares `lib/net.py` (HTTPS helper; XKCD still has its own copy).
-- Next ideas Kevin liked: #2 space-weather aurora (NOAA solar wind), #4 sky
+- Next ideas Kevin liked: #2 space weather (built: [[spaceweather-app]]), #4 sky
   clock (moon/sun/planets computed on badge), mic seismograph after soldering.
