@@ -13,7 +13,7 @@ Kevin picked both boards from tools/preview_earth_wopr.py, 2026-11-07.
 Missiles are made up (cities on two fictional sides). They are stored as
 city-to-city flights with launch times, independent of the map, so tracks
 carry on across a view change; each view draws them in its own projection.
-A track grows a step per update, lands with blast rings, then stops being
+A track grows a step per update, lands with a mushroom cloud, then stops being
 drawn and fades as an e-paper ghost - the long exposure. Now and then
 (BIG_SALVO_ODDS) a big salvo heads for US cities.
 
@@ -29,7 +29,7 @@ on launch, view change, rising DEFCON, a new M6+ quake, and every FULL_S.
 User A: switch to the other board now (fresh data, full refresh).
 User B: launch a big salvo at US cities now (DEFCON goes up).
 
-When a salvo at the US has landed (blast rings shown for one update), the
+When a salvo at the US has landed (both mushroom-cloud stages shown), the
 board clears (no tracks) and WOPR shows the lesson it learned in the film,
 black on white over the map, with the quick refresh (Kevin, 2026-11-07).
 It stays until the next update; DEFCON falls back at the next full refresh.
@@ -83,7 +83,7 @@ SALVO_SIZES = (1, 2, 2, 3)
 BIG_SALVO_ODDS = 10    # 1 salvo in this many is a big one at US cities (~every 1.5 h)
 BIG_SALVO = (4, 8)     # missiles in a big salvo: DEFCON 2 or 1
 FLIGHT = (7, 12)       # updates per flight: ~20-35 min
-BLAST_STEPS = 2        # updates the blast rings stay after landing
+BLAST_STEPS = 2        # updates the mushroom cloud stays after landing (young, full)
 TRACK_POINTS = 48
 LIFT = (0.50, 0.80)    # arc height range (fraction of track length), per missile;
                        # higher arcs, same flight time (Kevin, 2026-11-07)
@@ -633,7 +633,7 @@ class WoprApp(BaseApp):
             self.want_salvo = False
             self._big_salvo(now=True)
             launched = True
-        lesson = self.salvo_lands is not None and self.step > self.salvo_lands + 1
+        lesson = self.salvo_lands is not None and self.step > self.salvo_lands + BLAST_STEPS
         if lesson:              # the US salvo has landed: clear the board
             self.salvo_lands = None
             self.missiles = []

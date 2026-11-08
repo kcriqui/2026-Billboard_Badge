@@ -37,7 +37,7 @@ time ±1 so they arrive together. Salvos avoid repeating an in-flight pair.
 Flights take 7-12 updates (3 min each). PREROLL starts mid-exchange.
 
 **Drawing:** heads are rotated missile shapes; a faint dotted path (2x2
-dots — 1 px went pale in fast refreshes) from each head to a dotted target
+dots — sparse 1 px dots went pale in fast refreshes) from each head to a dotted target
 circle; track id at the launch point (moving labels smeared). Impact =
 mushroom cloud (Kevin, 2026-11-07), young 32 px on the 1st update, full
 48 px on the 2nd, rising from the target: sprites in
@@ -54,11 +54,12 @@ final pass clears red under all black (black + red = undriven pixel).
 when ≥3 are within 2 updates of impact. Rising DEFCON forces a full refresh
 (red box); falling waits for the next scheduled one.
 
-**Lesson:** when a US salvo has landed (+1 update of blasts) the board
+**Lesson:** when a US salvo has landed and both cloud stages have shown
+(`BLAST_STEPS` updates; before 2026-11-07 it cut off the full cloud) the board
 clears its tracks and shows the lesson WOPR learns in the film ("A STRANGE
 GAME. / THE ONLY WINNING MOVE IS / NOT TO PLAY." — Kevin's request) in a
 white panel over the map, black/white with the quick refresh (Kevin: not a
-full-screen flash), `font_mono_huge`. B to lesson ≈ 30-40 min; Kevin chose to
+full-screen flash), `font_mono_huge`. B to lesson ≈ 30-45 min; Kevin chose to
 keep that pace.
 
 **Fonts:** `font_mono` (15), `font_mono_big` (Bold 26), `font_mono_huge`
