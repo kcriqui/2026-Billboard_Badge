@@ -8,8 +8,10 @@ MicroPython (framebuf, machine) and renders Oled.render() at real pixels:
 long and short names in the menu, and an app running. Needs Pillow.
 """
 
+import builtins
 import pathlib
 import sys
+import time
 import types
 
 from PIL import Image, ImageDraw
@@ -69,6 +71,8 @@ sys.modules["framebuf"] = fb
 mc = types.ModuleType("machine")
 mc.I2C = mc.Pin = None
 sys.modules["machine"] = mc
+builtins.ptr8 = lambda b: b
+time.ticks_ms = lambda: int(time.monotonic() * 1000)
 sys.modules["micropython"] = types.SimpleNamespace(viper=lambda f: f, native=lambda f: f, const=lambda x: x)
 sys.modules["lib.wifi"] = types.ModuleType("lib.wifi")
 sys.path.insert(0, str(REPO / "firmware/badge"))
@@ -107,6 +111,9 @@ def main():
         o._status = status
         o.render(name, menu, idx, 5)
         shots.append(panel(o, label))
+    for _ in range(60):
+        o.life_advance()
+    shots[-1] = panel(o, "Idle: Game of Life, 60 generations")
     w, h = shots[0].size
     sheet = Image.new("RGB", (w * 3, h * 2), (40, 40, 40))
     for i, s in enumerate(shots):

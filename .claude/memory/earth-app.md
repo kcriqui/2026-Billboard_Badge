@@ -39,8 +39,8 @@ Flights take 7-12 updates (3 min each). PREROLL starts mid-exchange.
 **Drawing:** heads are rotated missile shapes; a faint dotted path (2x2
 dots — sparse 1 px dots went pale in fast refreshes) from each head to a dotted target
 circle; track id at the launch point (moving labels smeared). Impact =
-mushroom cloud (Kevin, 2026-11-07), young 32 px on the 1st update, full
-48 px on the 2nd, rising from the target: sprites in
+mushroom cloud (Kevin, 2026-11-07), young 32x32 on the 1st update, full
+32x48 on the 2nd (Kevin 2026-11-08: taller, not larger), rising from the target: sprites in
 `lib/sprite_mushroom.py` made by `tools/make_mushroom.py` (billows lit
 like spheres, modelled on Wikipedia test-shot photos; Atkinson dither at
 1 px — Kevin rejected 2x2 cells and the first, double size). Silhouette

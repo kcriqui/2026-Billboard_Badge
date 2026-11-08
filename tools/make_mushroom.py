@@ -39,13 +39,13 @@ def _norm(v):
     return tuple(c / n for c in v)
 
 
-def sphere(px, mk, S, cx, cy, r, lo, hi, squash=1.0):
+def sphere(px, mk, Sx, Sy, cx, cy, r, lo, hi, squash=1.0):
     """Paint a sphere-lit billow (brightness lo..hi) into the grey grid."""
     lx, ly, lz = _norm(LIGHT)
     ry = r * squash
-    for y in range(max(0, int(cy - ry)), min(S, int(cy + ry) + 1)):
+    for y in range(max(0, int(cy - ry)), min(Sy, int(cy + ry) + 1)):
         dy = (y - cy) / ry
-        for x in range(max(0, int(cx - r)), min(S, int(cx + r) + 1)):
+        for x in range(max(0, int(cx - r)), min(Sx, int(cx + r) + 1)):
             dx = (x - cx) / r
             q = dx * dx + dy * dy
             if q > 1:
@@ -56,31 +56,31 @@ def sphere(px, mk, S, cx, cy, r, lo, hi, squash=1.0):
             mk[y][x] = 1
 
 
-def draw_cloud(size, stage, seed=7):
+def draw_cloud(w, h, stage, seed=7):
     """Grey cloud (0 black .. 255 white) and silhouette, at 4x panel size."""
     k = 4
-    S = size * k
+    Sx, Sy = w * k, h * k
     rnd = random.Random(seed * 10 + stage)
-    px = [[255.0] * S for _ in range(S)]
-    mk = [[0] * S for _ in range(S)]
-    cx, ground = S / 2, S - 2 * k
+    px = [[255.0] * Sx for _ in range(Sy)]
+    mk = [[0] * Sx for _ in range(Sy)]
+    cx, ground = Sx / 2, Sy - 2 * k
     if stage == 1:   # young: billowing fireball on a short stem, dust starting
-        cap = (S * 0.42, S * 0.30, S * 0.22)      # centre y, half width, half height
-        stem_w0, stem_w1 = S * 0.05, S * 0.09
-        base = (S * 0.26, S * 0.07)
+        cap = (Sy * 0.42, Sx * 0.30, Sy * 0.22)   # centre y, half width, half height
+        stem_w0, stem_w1 = Sx * 0.05, Sx * 0.09
+        base = (Sx * 0.26, Sx * 0.07)
         ring = None
     else:            # full mushroom: wide cap, tall stem, ring, wide base surge
-        cap = (S * 0.25, S * 0.43, S * 0.17)
-        stem_w0, stem_w1 = S * 0.045, S * 0.10
-        base = (S * 0.36, S * 0.075)
-        ring = (S * 0.60, S * 0.19)
+        cap = (Sy * 0.20, Sx * 0.43, Sy * 0.15)
+        stem_w0, stem_w1 = Sx * 0.06, Sx * 0.13
+        base = (Sx * 0.36, Sx * 0.075)
+        ring = (Sy * 0.58, Sx * 0.24)
     cap_y, cap_rx, cap_ry = cap
     # base surge: flattened billows along the ground
     for i in range(14):
         f = (i / 13) * 2 - 1
         bx = cx + f * base[0] + rnd.uniform(-1, 1) * k
         r = base[1] * rnd.uniform(0.75, 1.25) * (1.35 - 0.6 * abs(f))   # domed in the middle
-        sphere(px, mk, S, bx, ground - r * 0.85, r * 1.15, 70, 230, squash=0.85)
+        sphere(px, mk, Sx, Sy, bx, ground - r * 0.85, r * 1.15, 70, 230, squash=0.85)
     # stem: shaded like a cylinder, wavy, flaring at the foot
     top, bot = cap_y + cap_ry * 0.7, ground - base[1] * 0.8
     for y in range(int(top), int(bot)):
@@ -120,30 +120,30 @@ def draw_cloud(size, stage, seed=7):
     blobs.sort()                                         # top first, lower in front
     for by, bx, r in blobs:
         dark = by > cap_y + cap_ry * 0.3
-        sphere(px, mk, S, bx, by, r, 35 if dark else 95, 215 if dark else 255)
-    grey = Image.new("L", (S, S))
+        sphere(px, mk, Sx, Sy, bx, by, r, 35 if dark else 95, 215 if dark else 255)
+    grey = Image.new("L", (Sx, Sy))
     grey.putdata([int(v) for row in px for v in row])
-    mask = Image.new("L", (S, S))
+    mask = Image.new("L", (Sx, Sy))
     mask.putdata([255 * v for row in mk for v in row])
     return grey, mask
 
 
-def to_panel(grey, mask, size):
+def to_panel(grey, mask, w, h):
     """Downscale to panel pixels: Atkinson-dithered at single-pixel
     resolution (Kevin: no 2x2 cells) with a 1 px outline."""
-    g = grey.resize((size, size), Image.BOX)
-    mh = mask.resize((size, size), Image.BOX)
-    gv = [[float(g.getpixel((x, y))) for x in range(size)] for y in range(size)]
-    mv = [[mh.getpixel((x, y)) > 100 for x in range(size)] for y in range(size)]
-    ink = Image.new("1", (size, size), 0)
-    msk = Image.new("1", (size, size), 0)
+    g = grey.resize((w, h), Image.BOX)
+    mh = mask.resize((w, h), Image.BOX)
+    gv = [[float(g.getpixel((x, y))) for x in range(w)] for y in range(h)]
+    mv = [[mh.getpixel((x, y)) > 100 for x in range(w)] for y in range(h)]
+    ink = Image.new("1", (w, h), 0)
+    msk = Image.new("1", (w, h), 0)
     ip, mp = ink.load(), msk.load()
-    for y in range(size):
-        for x in range(size):
+    for y in range(h):
+        for x in range(w):
             if not mv[y][x]:
                 continue
             mp[x, y] = 1
-            edge = any(not (0 <= x + dx < size and 0 <= y + dy < size and mv[y + dy][x + dx])
+            edge = any(not (0 <= x + dx < w and 0 <= y + dy < h and mv[y + dy][x + dx])
                        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
             old = gv[y][x]
             new = 0 if (old < 128 or edge) else 255
@@ -152,7 +152,7 @@ def to_panel(grey, mask, size):
             err = (old - new) / 8
             for dx, dy in ((1, 0), (2, 0), (-1, 1), (0, 1), (1, 1), (0, 2)):
                 xx, yy = x + dx, y + dy
-                if 0 <= xx < size and yy < size and mv[yy][xx]:
+                if 0 <= xx < w and yy < h and mv[yy][xx]:
                     gv[yy][xx] += err
     return msk, ink
 
@@ -172,7 +172,7 @@ def pack(img):
     return bytes(out)
 
 
-SIZES = {1: 32, 2: 48}   # Kevin: half the first try; multiples of 8
+SIZES = {1: (32, 32), 2: (32, 48)}   # full cloud grows taller, not wider (Kevin)
 
 
 def main():
@@ -180,9 +180,9 @@ def main():
     ap.add_argument("--preview", help="also write a zoomed preview PNG")
     args = ap.parse_args()
     stages = {}
-    for stage, size in SIZES.items():
-        grey, mask = draw_cloud(size, stage)
-        stages[stage] = to_panel(grey, mask, size)
+    for stage, (w, h) in SIZES.items():
+        grey, mask = draw_cloud(w, h, stage)
+        stages[stage] = to_panel(grey, mask, w, h)
     with open(OUT, "w") as f:
         f.write('"""Mushroom-cloud sprites for WOPR, made by tools/make_mushroom.py; do not edit.\n\n'
                 'STAGES[n] = (width, height, anchor_x, anchor_y, MASK, INK): MONO_HLSB rows;\n'
@@ -190,9 +190,9 @@ def main():
                 'under the stem) goes on the target.\n"""\n\n')
         f.write("STAGES = {\n")
         for stage, (mk, ink) in stages.items():
-            size = SIZES[stage]
+            w, h = SIZES[stage]
             f.write("    %d: (%d, %d, %d, %d,\n        %r,\n        %r),\n" % (
-                stage, size, size, size // 2, size - 3, pack(mk), pack(ink)))
+                stage, w, h, w // 2, h - 3, pack(mk), pack(ink)))
         f.write("}\n")
     print("wrote", OUT)
     if args.preview:

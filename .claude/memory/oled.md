@@ -37,3 +37,8 @@ the menu (no more LED counting), WiFi signal and battery; an idle pattern
 - Phone photos of the OLED cut off rows (scan vs shutter): use Live Photo
   -> Long Exposure.
 - Kevin can mount it upside down: SSD1306 0xA0/0xC0 flips 180 deg for free.
+- **Idle Game of Life (Kevin, 2026-11-08):** 8 s after the menu closes
+  (`LIFE_AFTER_MS`), full screen, 64x32 cells at 2x2 px, wrap-around; new
+  soup when it dies or repeats (Brent cycle check on a hash). Any menu press
+  shows the name screen. The OLED now stays on through battery sleep (Kevin
+  OK'd it); `power.idle_tick` steps Life about every 2 s while asleep.

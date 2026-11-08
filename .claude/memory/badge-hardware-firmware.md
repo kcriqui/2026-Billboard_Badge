@@ -49,6 +49,10 @@ metadata:
   LED 0). A press longer than ~0.15 s wakes it and acts normally. Logs volts
   and sleep totals to `/data/power.log` every 10 min. Kevin tested it forced
   over USB 2026-11-06: works. Battery life not yet measured.
+  Since 2026-11-08 `/data/power.log` is CSV, written only on real battery every
+  5 min: `uptime_s,volts,mode,sleeps,asleep_s,oled`, with a `# boot` line per
+  run and one rotation to `power.log.old` at 32 KB. Create `/data/no_sleep` to
+  disable low-power mode for the comparison run (mode column says `awake`).
 - Menu order (LED #, read from the badge 2026-11-07, after Earth became
   WOPR): 0 Gallery, 1 Nametag, 2 Space Weather, 3 WOPR, 4 XKCD (the OLED
   shows the names). `/data/app_list` keeps stale entries past the

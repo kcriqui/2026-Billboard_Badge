@@ -9,7 +9,10 @@ name below it, as large as fits; two-word names too long for one line take
 two. In the menu, dots along the bottom show the position. Layout chosen by
 Kevin from previews (tools/preview_oled.py).
 
-Off while battery mode sleeps (lib/power.py), back on at the next press.
+A while after the menu closes, Conway's Game of Life fills the screen until
+the next menu press. The OLED stays on while battery mode sleeps
+(lib/power.py), and Life steps slowly through the sleep.
+
 If no OLED answers, the task waits and looks again every RETRY_S, so the
 badge works the same without one.
 
@@ -17,10 +20,13 @@ Wiring: SAO pin 1 3V3, 2 GND, 3 SDA (GPIO17), 4 SCL (GPIO18).
 """
 
 import asyncio as aio
+import os
 import time
 
 import framebuf
+import micropython
 from machine import I2C, Pin
+from micropython import const
 
 from lib import (bitfont, font_oled_big, font_oled_huge, font_oled_large,
                  font_oled_mid, font_oled_small, wifi)
@@ -32,6 +38,12 @@ STATUS_EVERY_MS = 10000
 RETRY_S = 30
 BAR_RULE = 12           # the status bar's rule; the name area starts below it
 DOTS_TOP = 56           # the name area ends here in the menu
+LIFE_AFTER_MS = 8000    # name stays this long after the menu closes, then Life
+LIFE_MS = 250           # one generation this often while awake
+_LIFE_W = const(64)     # cells; each is 2x2 pixels
+_LIFE_H = const(32)
+_LIFE_CELLS = const(2048)
+LIFE_DENSITY = 77       # of 256: share of cells alive in a new soup
 NAME_FONTS = (font_oled_huge, font_oled_large, font_oled_big, font_oled_mid)
 
 # LiPo resting voltage -> rough charge %, read at the regulator input.
@@ -48,6 +60,53 @@ def battery_pct(volts):
     return 0
 
 
+@micropython.viper
+def _life_step(cur, nxt):
+    """One generation on a wrap-around grid (one byte per cell)."""
+    a = ptr8(cur)
+    b = ptr8(nxt)
+    for y in range(_LIFE_H):
+        y0 = y * _LIFE_W
+        up = ((y + _LIFE_H - 1) & (_LIFE_H - 1)) * _LIFE_W
+        dn = ((y + 1) & (_LIFE_H - 1)) * _LIFE_W
+        for x in range(_LIFE_W):
+            xl = (x + _LIFE_W - 1) & (_LIFE_W - 1)
+            xr = (x + 1) & (_LIFE_W - 1)
+            n = (a[up + xl] + a[up + x] + a[up + xr] + a[y0 + xl] + a[y0 + xr]
+                 + a[dn + xl] + a[dn + x] + a[dn + xr])
+            v = 0
+            if n == 3:
+                v = 1
+            elif n == 2:
+                v = a[y0 + x]
+            b[y0 + x] = v
+
+
+@micropython.viper
+def _life_hash(cur) -> int:
+    a = ptr8(cur)
+    h = 0
+    for i in range(_LIFE_CELLS):
+        h = ((h * 31) + a[i]) & 0x3FFFFFFF
+    return h
+
+
+@micropython.viper
+def _life_draw(cur, buf):
+    """Cells to the panel's page buffer, each as 2x2 pixels."""
+    a = ptr8(cur)
+    o = ptr8(buf)
+    for page in range(8):
+        for x in range(_LIFE_W):
+            v = 0
+            for j in range(4):
+                if a[(page * 4 + j) * _LIFE_W + x]:
+                    v = v | (3 << (2 * j))
+            at = page * 128 + 2 * x
+            o[at] = v
+            o[at + 1] = v
+
+
 class Oled:
     def __init__(self):
         self.i2c = None
@@ -58,6 +117,15 @@ class Oled:
         self._last = None
         self._status = ("", 0, None)   # network, signal bars, battery % or None on USB
         self._status_at = None
+        self._page = None        # what the name screen shows, and since when
+        self._page_at = 0
+        self._in_life = False
+        self._life = bytearray(_LIFE_CELLS)
+        self._life_next = bytearray(_LIFE_CELLS)
+        self._life_at = None     # ticks_ms of the last generation
+        self._life_gen = 0
+        self._life_limit = 1     # cycle check: compare with a saved state,
+        self._life_mark = -1     # saved again at each power of two (Brent)
 
     # --- hardware -------------------------------------------------------
     def find(self):
@@ -187,9 +255,46 @@ class Oled:
         else:
             self.centered(font, mid, name)
 
+    # --- Game of Life -----------------------------------------------------
+    def _life_seed(self):
+        noise = os.urandom(_LIFE_CELLS)
+        for i in range(_LIFE_CELLS):
+            self._life[i] = 1 if noise[i] < LIFE_DENSITY else 0
+        self._life_gen = 0
+        self._life_limit = 1
+        self._life_mark = -1
+
+    def life_advance(self):
+        """One generation; a new soup once the old one dies or starts repeating."""
+        if self._life_at is None:
+            self._life_seed()
+        else:
+            _life_step(self._life, self._life_next)
+            self._life, self._life_next = self._life_next, self._life
+            h = _life_hash(self._life)
+            if h == self._life_mark or h == 0:
+                self._life_seed()
+            else:
+                self._life_gen += 1
+                if self._life_gen >= self._life_limit:
+                    self._life_mark = h
+                    self._life_limit *= 2
+        self._life_at = time.ticks_ms()
+        _life_draw(self._life, self.buf)
+
+    def _sleep_tick(self):
+        """Called from the battery-mode sleep loop (the tasks aren't running)."""
+        if self._in_life and self.i2c is not None:
+            try:
+                self.life_advance()
+                self.show()
+            except OSError:
+                pass   # the run() task notices when it next wakes
+
     # --- task -----------------------------------------------------------
     async def run(self, switcher):
         from lib.power import power
+        power.idle_tick = self._sleep_tick
         while True:
             if self.i2c is None:
                 if not self.find():
@@ -197,10 +302,6 @@ class Oled:
                     continue
             await aio.sleep_ms(100)
             try:
-                if power.sleeping:
-                    if self.on:
-                        self.power(False)
-                    continue
                 now = time.ticks_ms()
                 if self._status_at is None or time.ticks_diff(now, self._status_at) >= STATUS_EVERY_MS:
                     self._status = self._read_status()
@@ -209,6 +310,19 @@ class Oled:
                 idx = switcher.selection_idx if menu else switcher.active_idx
                 apps = switcher.apps
                 name = apps[idx].name if apps else "no apps"
+                page = (menu, idx, name)
+                if page != self._page:
+                    self._page, self._page_at = page, now
+                if not menu and time.ticks_diff(now, self._page_at) >= LIFE_AFTER_MS:
+                    self._in_life = True
+                    self._last = None   # draw the name again when Life ends
+                    if self._life_at is None or time.ticks_diff(now, self._life_at) >= LIFE_MS:
+                        self.life_advance()
+                        self.show()
+                        if not self.on:
+                            self.power(True)
+                    continue
+                self._in_life = False
                 key = (menu, idx, name, self._status)
                 if key != self._last or not self.on:
                     self.render(name, menu, idx, len(apps))
