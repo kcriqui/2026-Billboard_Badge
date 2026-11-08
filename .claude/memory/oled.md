@@ -1,6 +1,6 @@
 ---
 name: oled
-description: Adafruit #326 OLED on the SAO I2C bus for menu names/status/idle pattern - wiring, address, dead rows from the cracked corner
+description: 128x64 OLED on the SAO I2C bus for menu names and status - MachineIdeas SAO OLED at 0x3C, replaced the broken Adafruit #326
 metadata:
   type: project
 ---
@@ -20,15 +20,16 @@ the menu (no more LED counting), WiFi signal and battery; an idle pattern
   "SSID -77dBm   78%" or "USB". Menu closed: running app's name + status.
   Off while battery mode sleeps. Game of Life idle screen: Kevin said
   "hold off for now".
-- Address 0x3D. Driver tries standard pins, then SDA/SCL swapped (SoftI2C).
-- 2026-11-07 the SDA/SCL wires were found swapped (OLED answered only with
-  SCL=17, SDA=18); Kevin was asked to swap blue/yellow. Re-scan before
-  assuming either way.
-- Kevin broke a glass corner. Dead rows (from a staircase test photo):
-  odd rows 1-21 and rows 59, 61, 63. Rows 22-58 are all good. Every
-  even/odd row pair has its even row alive, so anything drawn 2 px tall
-  per logical row (2x2 Life cells, vertically doubled text) shows fully
-  across the whole screen. Keep fine text in rows 22-58.
+- **Panel replaced 2026-11-08:** the #326 broke; now a MachineIdeas "SAO
+  OLED" plugged straight into a SAO port, 128x64, at 0x3C (board option
+  0x3C or 0x3D), standard pins, no dead rows. Status byte 0x45, controller
+  not identified, but the SSD1306 init draws a clean full frame with no
+  column offset. Driver tries both addresses, uses hardware I2C at 400 kHz
+  (40/40 page writes passed) and page addressing. It first gave no I2C
+  reply on either pin order until Kevin fixed the SAO connection; a write
+  with no scan before it once gave ENODEV. The swapped-pins fallback and
+  the layout limits for the old panel's dead rows are no longer needed
+  (fallback removed; text positions unchanged).
 - Phone photos of the OLED cut off rows (scan vs shutter): use Live Photo
   -> Long Exposure.
 - Kevin can mount it upside down: SSD1306 0xA0/0xC0 flips 180 deg for free.

@@ -1,37 +1,35 @@
-"""Menu helper on an SSD1306 128x64 OLED (Adafruit #326) on the SAO I2C bus.
+"""Menu helper on a 128x64 SSD1306-style OLED on the SAO I2C bus.
+
+Currently a MachineIdeas "SAO OLED" (0x3C or 0x3D by its address option),
+which replaced an Adafruit #326 that broke. Any 128x64 panel at either
+address works.
 
 In the menu (Menu +/-) it shows the selected app's name between < > arrows,
 "MENU n / N" above and a status line below (WiFi network + signal, battery
 or USB). With the menu closed it shows the running app's name and the
 status line. Layout B, chosen by Kevin from previews (tools/preview_oled.py).
 
-Kevin's panel has a cracked corner: odd rows 1-21 and rows 59, 61, 63 are
-dead, so the name and status stay in rows 22-58; the small "MENU" label in
-the top strip shows combed but readable.
-
 Off while battery mode sleeps (lib/power.py), back on at the next press.
 If no OLED answers, the task waits and looks again every RETRY_S, so the
 badge works the same without one.
 
-Wiring: SAO pin 1 3V3, 2 GND, 3 SDA (GPIO17), 4 SCL (GPIO18). Kevin's
-wires were crossed, so if nothing answers on the standard pins it tries
-SDA/SCL swapped (bit-banged).
+Wiring: SAO pin 1 3V3, 2 GND, 3 SDA (GPIO17), 4 SCL (GPIO18).
 """
 
 import asyncio as aio
 import time
 
 import framebuf
-from machine import I2C, Pin, SoftI2C
+from machine import I2C, Pin
 
 from lib import bitfont, font_oled_big, font_oled_mid, font_oled_small, wifi
 
-ADDR = 0x3D
+ADDRS = (0x3C, 0x3D)
 W, H = 128, 64
 FLIP = False            # True if the OLED is mounted upside down
 STATUS_EVERY_MS = 10000
 RETRY_S = 30
-NAME_Y = 34             # centre rows of the three lines (rows 22-58 are good)
+NAME_Y = 34             # centre rows of the three lines
 STATUS_Y = 51
 LABEL_Y = 1
 
@@ -52,6 +50,7 @@ def battery_pct(volts):
 class Oled:
     def __init__(self):
         self.i2c = None
+        self.addr = None
         self.on = False
         self.buf = bytearray(W * H // 8)
         self.fb = framebuf.FrameBuffer(self.buf, W, H, framebuf.MONO_VLSB)
@@ -64,32 +63,35 @@ class Oled:
         """Look for the OLED; True if found (and initialised)."""
         try:
             i2c = I2C(0, scl=Pin(18), sda=Pin(17), freq=400000)
-            if ADDR in i2c.scan():
-                self.i2c = i2c
+            found = i2c.scan()
+            for addr in ADDRS:
+                if addr in found:
+                    break
             else:
-                i2c = SoftI2C(scl=Pin(17), sda=Pin(18), freq=400000)
-                if ADDR in i2c.scan():
-                    print("oled: found with SDA/SCL swapped")
-                    self.i2c = i2c
-        except OSError:
+                return False
+            self.i2c, self.addr = i2c, addr
+            # Page addressing (0x20, 0x02): the mode every SSD1306-style
+            # controller has, and the one this panel was tested in.
+            self._cmd(0xAE, 0xD5, 0x80, 0xA8, 0x3F, 0xD3, 0x00, 0x40, 0x8D, 0x14,
+                      0x20, 0x02, 0xA0 if FLIP else 0xA1, 0xC0 if FLIP else 0xC8,
+                      0xDA, 0x12, 0x81, 0xCF, 0xD9, 0xF1, 0xDB, 0x40, 0xA4, 0xA6)
+        except OSError as ex:
+            print("oled: init failed:", repr(ex))
             self.i2c = None
-        if self.i2c is None:
             return False
-        self._cmd(0xAE, 0xD5, 0x80, 0xA8, 0x3F, 0xD3, 0x00, 0x40, 0x8D, 0x14,
-                  0x20, 0x00, 0xA0 if FLIP else 0xA1, 0xC0 if FLIP else 0xC8,
-                  0xDA, 0x12, 0x81, 0xCF, 0xD9, 0xF1, 0xDB, 0x40, 0xA4, 0xA6)
         self.on = False
         self._last = None
-        print("oled: ready at 0x%02X" % ADDR)
+        print("oled: ready at 0x%02X" % self.addr)
         return True
 
     def _cmd(self, *cmds):
         for c in cmds:
-            self.i2c.writeto(ADDR, bytes((0x80, c)))
+            self.i2c.writeto(self.addr, bytes((0x80, c)))
 
     def show(self):
-        self._cmd(0x21, 0, W - 1, 0x22, 0, H // 8 - 1)
-        self.i2c.writeto(ADDR, b"\x40" + self.buf)
+        for page in range(H // 8):
+            self._cmd(0xB0 | page, 0x00, 0x10)
+            self.i2c.writeto(self.addr, b"\x40" + self.buf[page * W:(page + 1) * W])
 
     def power(self, on):
         self._cmd(0xAF if on else 0xAE)

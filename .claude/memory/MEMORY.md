@@ -7,4 +7,4 @@
 - [Nametag](nametag.md) — name tag + photos (A/B), xkcd Script "Kevin", make_nametag/make_photo tools
 - [WOPR / Earth app](earth-app.md) — WarGames-style war room: made-up missiles, world/polar boards, DEFCON, lesson, ISS + quakes, attribution
 - [Space Weather app](spaceweather-app.md) — dithered plasma driven by NOAA solar wind; layers, refresh, feeds
-- [OLED](oled.md) — #326 OLED on SAO I2C (0x3D) for menu/status/idle; dead rows from cracked corner
+- [OLED](oled.md) — SAO OLED (MachineIdeas, 0x3C, replaced the broken #326) for menu/status
