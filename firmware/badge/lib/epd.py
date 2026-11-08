@@ -52,7 +52,7 @@ EPD_RST_PIN = Pin(11, mode=Pin.OUT)
 EPD_SCL_PIN = Pin(21, mode=Pin.OUT)
 EPD_SDA_PIN = Pin(47, mode=Pin.OUT)
 EPD_SPI_MISO_PIN = Pin(45, mode=Pin.IN)  # Not connected, signal not needed
-EPD_PWR_EN_PIN = 48
+EPD_PWR_EN_PIN = Pin(48, mode=Pin.OUT, value=False)
 
 
 pdi_cp = 0x9608
@@ -204,6 +204,17 @@ class EPaperDisplay:
 
         # The framebuffers are set and display should be updated.
         self._framebuffer_ready = aio.Event()
+        # Panel capability stays stable while the worker sends prepared frames.
+        self._supports_grayscale = self._reverse_fb_bits
+        self._requested_grayscale = False
+        self._requested_mixed = False
+        self._render_grayscale = False
+        self._render_mixed = False
+        # E-paper keeps its image across reboot; its initial pigments are unknown.
+        self._panel_monochrome = False
+        # Gray helpers hand _send_images logical-order planes. Set afresh by
+        # run() for every refresh, so an interrupted one can't leave it stuck.
+        self._logical_planes = False
 
         """Each byte is a mini-row of 8 bits for pixels of one color (1 sets the color, 0 is white)
         Bytes are in rows across the screen, as seen on the badge
@@ -257,7 +268,12 @@ class EPaperDisplay:
         except AttributeError:
             stride = w * 2
         src = color_p.__dereference__(stride * h)
-        _viper_lv_flush(
+        convert = _viper_lv_flush
+        if (self._render_grayscale or self._render_mixed) and self.supports_grayscale:
+            from lib import epd_grayscale
+            convert = (epd_grayscale.rgb565_to_mixed if self._render_mixed
+                       else epd_grayscale.rgb565_to_grayscale)
+        convert(
             src,
             self._framebuffer_black,
             self._framebuffer_red,
@@ -269,7 +285,34 @@ class EPaperDisplay:
         )
         disp.flush_ready()
 
-    def update(self, fast=False, passes=None, keep_red=False):
+    @property
+    def supports_grayscale(self):
+        return self._supports_grayscale
+
+    def _check_modes(self, grayscale, mixed):
+        if grayscale and mixed:
+            raise ValueError("Choose grayscale or mixed mode")
+        if (grayscale or mixed) and not self.supports_grayscale:
+            raise ValueError("Grayscale refresh requires a B1 panel")
+
+    def refresh_lvgl(self, grayscale=False, mixed=False):
+        """Render LVGL into the framebuffers; use the same mode in update().
+
+        Default rendering keeps the original B/W/red thresholds. Grayscale
+        produces B/W/gray; mixed preserves red and adds gray as a fourth color.
+        """
+        self._check_modes(grayscale, mixed)
+        previous_grayscale = self._render_grayscale
+        previous_mixed = self._render_mixed
+        try:
+            self._render_grayscale = grayscale
+            self._render_mixed = mixed
+            lvgl.refr_now(self.lv_display)
+        finally:
+            self._render_grayscale = previous_grayscale
+            self._render_mixed = previous_mixed
+
+    def update(self, fast=False, passes=None, keep_red=False, grayscale=False, mixed=False):
         """Done updating the framebuffer, update the display with the contents.
 
         fast=True: short waveform (~4-6 s instead of ~35 s), black and white
@@ -278,8 +321,16 @@ class EPaperDisplay:
         red already on the panel undriven. passes overrides the pull count.
         Ported from upstream PR #3 (FacioErgoSum). Create /data/no_fast_refresh
         on the badge to turn every fast request into a normal refresh.
+
+        grayscale=True uses 00 white, 01 black, 10 gray (no red).
+        mixed=True uses 00 white, 01 black, 10 red, 11 gray in software.
+        Gray waveforms are opt-in, need a B1 panel, ignore fast, and must
+        match the mode used by refresh_lvgl()/draw_png().
         """
+        self._check_modes(grayscale, mixed)
         self._request = (fast, passes, keep_red)
+        self._requested_grayscale = grayscale
+        self._requested_mixed = mixed
         self._display_updated.clear()
         self._framebuffer_ready.set()
 
@@ -309,10 +360,12 @@ class EPaperDisplay:
                 self.black.pixel((col + img_c), (row + img_r), int(black))
                 self.red.pixel((col + img_c), (row + img_r), int(red))
 
-    def draw_png(self, filename: str, row: int = 0, col: int = 0):
+    def draw_png(self, filename: str, row: int = 0, col: int = 0, grayscale: bool = False, mixed: bool = False):
+        """Draw a PNG; use the same grayscale/mixed mode in update()."""
+        self._check_modes(grayscale, mixed)
         gc.collect()
         print(f"Loading {filename} This will take a while... {time.time()}")
-        show_png(filename, self._framebuffer_black, self._framebuffer_red, row, col)
+        show_png(filename, self._framebuffer_black, self._framebuffer_red, row, col, grayscale, mixed)
         print("Done loading png")
         gc.collect()
 
@@ -323,8 +376,14 @@ class EPaperDisplay:
         red_right = bytearray(half_frame_one_color_size)
         while True:
             if self._framebuffer_ready.is_set():
+                # Clear before awaiting hardware so a later request is retained.
+                self._framebuffer_ready.clear()
+                grayscale = self._requested_grayscale
+                mixed = self._requested_mixed
                 self._display_updated.clear()
                 fast, passes, keep_red = self._request
+                if grayscale or mixed:
+                    fast = False
                 if fast and not self.fast_refresh_allowed():
                     print("EPD: fast refresh switched off (%s)" % NO_FAST_REFRESH_PATH)
                     fast = False
@@ -334,7 +393,7 @@ class EPaperDisplay:
                 progress = aio.create_task(self._led_progress(self._refresh_ms[mode]))
                 started = time.ticks_ms()
                 t0 = time.ticks_ms()
-                if self._reverse_fb_bits:
+                if self._reverse_fb_bits and not (grayscale or mixed):
                     _fast_split_and_reverse(
                         self._framebuffer_black, black_left, black_right, _REVERSE_LUT
                     )
@@ -352,22 +411,30 @@ class EPaperDisplay:
 
                 # Don't flip _reverse_fb_bits around this call (as PR #4
                 # did): if the refresh is interrupted the flag stays wrong
-                # and later images go out bit-mirrored. _send_images no
-                # longer reverses, so there is nothing to switch off.
+                # and later images go out bit-mirrored.
+                self._logical_planes = grayscale or mixed
                 try:
-                    await self.global_update(
-                        black_left, red_left, black_right, red_right,
-                        fast, passes, keep_red,
-                    )
+                    if mixed:
+                        from lib.epd_grayscale import mixed_update
+                        await mixed_update(self, black_left, red_left, black_right, red_right)
+                    else:
+                        await self.global_update(
+                            black_left, red_left, black_right, red_right,
+                            fast, passes, keep_red, grayscale=grayscale,
+                        )
+                except BaseException:
+                    self._panel_monochrome = False
+                    raise
                 finally:
                     progress.cancel()
                 took = time.ticks_diff(time.ticks_ms(), started)
                 # Learn how long each kind of refresh really takes, for the bar.
-                self._refresh_ms[mode] = (self._refresh_ms[mode] + took) // 2
+                if not (grayscale or mixed):
+                    self._refresh_ms[mode] = (self._refresh_ms[mode] + took) // 2
                 print("Display refresh (%s) took %d ms" % (mode, took))
-                self._framebuffer_ready.clear()
                 gc.collect()
-                self._display_updated.set()
+                if not self._framebuffer_ready.is_set():
+                    self._display_updated.set()
                 await self._led_done()
             await aio.sleep_ms(50)
 
@@ -407,7 +474,16 @@ class EPaperDisplay:
         fast=False,
         passes=None,
         keep_red=False,
+        grayscale=False,
     ):
+        if grayscale:
+            self._check_modes(True, False)
+            from lib.epd_grayscale import grayscale_update
+            await grayscale_update(self, black_left, red_left, black_right, red_right)
+            return
+        # Keep the ordinary three-color sequence and overlapping-plane behavior.
+        has_red = any(red_left) or any(red_right)
+        self._panel_monochrome = False
         wave = self._fast_lut(keep_red) if fast else None
         if wave is None:
             passes = 1
@@ -435,6 +511,8 @@ class EPaperDisplay:
         print("Done updating display")
         tock = time.ticks_ms()
         print(tock - tick)
+        # A fast refresh leaves whatever red it didn't drive on the panel.
+        self._panel_monochrome = not has_red and wave is None
 
     def _fast_lut(self, keep_red):
         """The short waveform for this panel, or None (then: full refresh)."""
@@ -507,7 +585,7 @@ class EPaperDisplay:
         """
         self._send_index_data(0x09, [0x7F, 0x7D, 0x00])
         await aio.sleep_ms(200)
-        while not EPD_BUSY1_PIN.value() or not EPD_BUSY2_PIN.value():
+        while not EPD_BUSY1_PIN.value() and not EPD_BUSY2_PIN.value():
             await aio.sleep_ms(1)
         EPD_DC_PIN.value(False)
         EPD_CS1_PIN.value(False)
@@ -551,7 +629,7 @@ class EPaperDisplay:
         EPD_CS2_PIN.value(True)
 
     async def _display_refresh(self):
-        while not EPD_BUSY1_PIN.value() or not EPD_BUSY2_PIN.value():
+        while not EPD_BUSY1_PIN.value() and not EPD_BUSY2_PIN.value():
             await aio.sleep_ms(100)
         self._send_index_data(0x15, [0x3C])
         await aio.sleep_ms(5)
@@ -568,6 +646,7 @@ class EPaperDisplay:
         EPD_CS1_PIN.value(True)
         EPD_CS2_PIN.value(True)
         await aio.sleep_ms(5)
+        self._send_index_data(0x70, [0x71, 0x36])  # B1 booster config, itc97; Errata 9
 
     def _send_images(
         self,
@@ -582,7 +661,12 @@ class EPaperDisplay:
         assert len(red_right) == half_frame_one_color_size
 
         # The halves arrive already bit-reversed where the panel needs it
-        # (run() does that in one viper pass), so nothing to do here.
+        # (run() does that in one viper pass), except from the gray helpers.
+        if self._logical_planes and self._reverse_fb_bits:
+            black_left = bytes(_REVERSE_LUT[b] for b in black_left)
+            red_left = bytes(_REVERSE_LUT[b] for b in red_left)
+            black_right = bytes(_REVERSE_LUT[b] for b in black_right)
+            red_right = bytes(_REVERSE_LUT[b] for b in red_right)
 
         # DUW for both left and right halves
         self._send_index_data(0x13, [0x00, 0x3B, 0x00, 0x00, 0x9F, 0x02])
@@ -637,13 +721,13 @@ class EPaperDisplay:
         Implemented after image data are uploaded to CoG
         Specific to mid-sized EPDs only
         """
-        while not EPD_BUSY1_PIN.value() or not EPD_BUSY2_PIN.value():
+        while not EPD_BUSY1_PIN.value() and not EPD_BUSY2_PIN.value():
             await aio.sleep_ms(100)
         self._send_index_data(0x09, [0x7F])
         self._send_index_data(0x05, [0x7D])
         self._send_index_data(0x09, [0x00])
         await aio.sleep_ms(200)
-        while not EPD_BUSY1_PIN.value() or not EPD_BUSY2_PIN.value():
+        while not EPD_BUSY1_PIN.value() and not EPD_BUSY2_PIN.value():
             await aio.sleep_ms(100)
         EPD_DC_PIN.value(False)
         EPD_CS1_PIN.value(False)

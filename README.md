@@ -3,6 +3,8 @@
 # Badge Hardware
 The badge uses a 9.7 inch Pervasive Displays E2969JS0B1 electronic paper panel that was recycled from price tags which were destined for a now bankrupt German department store chain, coupled with an ESP32-S3 microcontroller.
 
+A printable snap-on back cover is in [hardware/back_cover](hardware/back_cover).
+
 ## Pins
 
 The board only has two truly free GPIOs
@@ -22,10 +24,10 @@ The row of WS2812-compatible LEDs is on GPIO38
 ## Buttons
 
 * Menu +/-: GPIO40 / GPIO15
-* User A/B: GPIO39 / GPIO15
+* User A/B: GPIO39 / GPIO16
 
 # Applications
-In its out of the box configuration the badge can show the 2026 Supercon schedule, act as a digital name tag, and cycle through a built-in collection of art from Hackaday's incredible Art Director Joe Kim. If you come up with additional apps that you'd like to share, feel free to make a pull request.
+In its out of the box configuration the badge can show the 2026 Supercon schedule, act as a digital name tag, and cycle through a built-in collection of art from Hackaday's incredible Art Director Joe Kim. If you come up with additional apps that you'd like to share, feel free to make a pull request. Please add new apps into the `user_apps/` directory, not in `firmware/badge/apps/` so everyone can choose which new apps they want to take on their badge.
 
 # Displaying Images
 
@@ -47,3 +49,7 @@ Based on the above pixel logic, where each pixel is already one of the three sup
 - **XKCD** app: comics by Randall Munroe, [xkcd.com](https://xkcd.com) (CC BY-NC 2.5), fetched live; not redistributed here.
 - **Nametag** handwriting: [xkcd Script](https://github.com/ipython/xkcd-font) font (CC BY-NC 3.0), used to render the name tag image; the font itself is not committed.
 - Fast refresh ported from upstream PR #3 (FacioErgoSum); faster display driver merged from upstream PR #4 (trandi).
+
+# Contributing
+
+We are looking at PRs over the weekend, but we're also busy with the conference so it may take a while to look at them. Please put user apps and infrastructure changes into separate PRs so they are easier to review. We want to take apps more quickly, and infrastructure updates a little more carefully.
