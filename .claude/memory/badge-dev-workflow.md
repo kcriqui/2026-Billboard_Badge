@@ -35,6 +35,10 @@ metadata:
   (interrupts main.py but keeps LVGL state), then `mpremote reset` to restart.
   Test scripts that `asyncio.run()` must call `asyncio.new_event_loop()`
   first ([[badge-gotchas]]). Wait for any refresh to finish before interrupting.
+- Since the 2026-11-08 upstream merge, interrupting main.py runs its
+  `finally` (deletes the LVGL display), so `resume exec` needs a reset after
+  it. Reading the badge's serial with `stty` + `cat` right after a reset gave
+  an empty log and the console then stopped answering; use `resume exec`.
 - Battery mode can't be tested over USB without forcing it: create
   `/data/battery_mode`, reset, let Kevin test; to undo, have Kevin press RESET
   and remove the file within ~45 s (before it idles to sleep).

@@ -50,6 +50,11 @@ the badge (no laptop needed) on any WiFi in `wifi.json` that's in range.
   LVGL text ~0.2 s, then
   the panel: ~36 s full (measured), ~5 s fast (Kevin confirmed on the badge,
   not instrumented). Buttons are unresponsive during download/convert.
+- **Gray edges tried and rejected (Kevin, 2026-11-08):** a one-tone gray
+  band next to the black cut, via upstream's mixed refresh, compared on #619
+  with User B: "no real improvement", and it cost the fast refresh. Removed.
+  The gray worked correctly (not mirrored). Untried: enlarging the real gray
+  source values; don't propose it unprompted.
 - Possible follow-up: switch WiFi off between updates if battery life is poor.
 
 Licence credit (2026-11-07): xkcd is CC BY-NC 2.5 (Randall Munroe). Header
