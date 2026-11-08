@@ -4,10 +4,10 @@ Currently a MachineIdeas "SAO OLED" (0x3C or 0x3D by its address option),
 which replaced an Adafruit #326 that broke. Any 128x64 panel at either
 address works.
 
-In the menu (Menu +/-) it shows the selected app's name between < > arrows,
-"MENU n / N" above and a status line below (WiFi network + signal, battery
-or USB). With the menu closed it shows the running app's name and the
-status line. Layout B, chosen by Kevin from previews (tools/preview_oled.py).
+A status bar on top (signal bars, network, battery or USB) and the app's
+name below it, as large as fits; two-word names too long for one line take
+two. In the menu, dots along the bottom show the position. Layout chosen by
+Kevin from previews (tools/preview_oled.py).
 
 Off while battery mode sleeps (lib/power.py), back on at the next press.
 If no OLED answers, the task waits and looks again every RETRY_S, so the
@@ -22,16 +22,17 @@ import time
 import framebuf
 from machine import I2C, Pin
 
-from lib import bitfont, font_oled_big, font_oled_mid, font_oled_small, wifi
+from lib import (bitfont, font_oled_big, font_oled_huge, font_oled_large,
+                 font_oled_mid, font_oled_small, wifi)
 
 ADDRS = (0x3C, 0x3D)
 W, H = 128, 64
 FLIP = False            # True if the OLED is mounted upside down
 STATUS_EVERY_MS = 10000
 RETRY_S = 30
-NAME_Y = 34             # centre rows of the three lines
-STATUS_Y = 51
-LABEL_Y = 1
+BAR_RULE = 12           # the status bar's rule; the name area starts below it
+DOTS_TOP = 56           # the name area ends here in the menu
+NAME_FONTS = (font_oled_huge, font_oled_large, font_oled_big, font_oled_mid)
 
 # LiPo resting voltage -> rough charge %, read at the regulator input.
 _LIPO = ((4.20, 100), (4.10, 90), (4.00, 80), (3.90, 65), (3.80, 50),
@@ -55,7 +56,7 @@ class Oled:
         self.buf = bytearray(W * H // 8)
         self.fb = framebuf.FrameBuffer(self.buf, W, H, framebuf.MONO_VLSB)
         self._last = None
-        self._status = ""
+        self._status = ("", 0, None)   # network, signal bars, battery % or None on USB
         self._status_at = None
 
     # --- hardware -------------------------------------------------------
@@ -118,38 +119,73 @@ class Oled:
         w = bitfont.width(font, s)
         self.text(font, x0 + (x1 - x0 - w) // 2, cy - font.HEIGHT // 2, s)
 
-    def _status_line(self):
+    def _read_status(self):
         from lib import power as power_mod
+        net, bars = "no WiFi", 0
         if wifi.is_connected():
+            net, bars = "WiFi on", 1
             try:
-                net = "%s %ddBm" % (wifi._wlan.config("ssid"), wifi._wlan.status("rssi"))
+                net = wifi._wlan.config("ssid")
+                rssi = wifi._wlan.status("rssi")
+                bars = 4 if rssi > -55 else 3 if rssi > -65 else 2 if rssi > -75 else 1
             except Exception:
-                net = "WiFi on"
+                pass
+        pct = battery_pct(power_mod.input_volts()) if power_mod.on_battery() else None
+        return net, bars, pct
+
+    def _status_bar(self):
+        net, bars, pct = self._status
+        for i in range(4):
+            x = i * 4
+            if i < bars:
+                h = 3 + i * 2
+                self.fb.fill_rect(x, 9 - h + 1, 3, h, 1)
+            else:
+                self.fb.hline(x, 9, 3, 1)
+        if pct is None:
+            label, right = "USB", W
         else:
-            net = "no WiFi"
-        batt = "%d%%" % battery_pct(power_mod.input_volts()) if power_mod.on_battery() else "USB"
-        line = net + "   " + batt
-        while bitfont.width(font_oled_small, line) > W and len(net) > 4:
+            self.fb.rect(W - 19, 0, 17, 10, 1)
+            self.fb.fill_rect(W - 2, 3, 2, 4, 1)
+            fill = (14 * pct + 50) // 100
+            if fill:
+                self.fb.fill_rect(W - 17, 2, fill, 6, 1)
+            label, right = "%d%%" % pct, W - 21
+        lw = bitfont.width(font_oled_small, label)
+        self.text(font_oled_small, right - lw, 0, label)
+        room = right - lw - 4 - 18
+        while bitfont.width(font_oled_small, net) > room and len(net) > 4:
             net = net[:-2] + "~"   # shorten a long network name
-            line = net + "   " + batt
-        return line
+        self.text(font_oled_small, 18, 0, net)
+        self.fb.hline(0, BAR_RULE, W, 1)
+
+    def _dots(self, idx, count):
+        gap = min(10, (W - 8) // max(count - 1, 1))
+        x0 = W // 2 - (count - 1) * gap // 2
+        for i in range(count):
+            x = x0 + i * gap
+            if i == idx:
+                self.fb.fill_rect(x - 2, 58, 5, 5, 1)
+            else:
+                self.fb.fill_rect(x - 1, 59, 3, 3, 1)
 
     def render(self, name, menu, idx, count):
         self.fb.fill(0)
+        self._status_bar()
         if menu:
-            self.centered(font_oled_small, LABEL_Y + font_oled_small.HEIGHT // 2,
-                          "MENU  %d / %d" % (idx + 1, count))
-            arrow_w = bitfont.width(font_oled_small, ">") + 3
-            self.text(font_oled_small, 0, NAME_Y - font_oled_small.HEIGHT // 2, "<")
-            self.text(font_oled_small, W - arrow_w + 3, NAME_Y - font_oled_small.HEIGHT // 2, ">")
-            x0, x1 = arrow_w, W - arrow_w
+            self._dots(idx, count)
+        mid = (BAR_RULE + 1 + (DOTS_TOP if menu else H)) // 2
+        font = NAME_FONTS[-1]
+        for f in NAME_FONTS:
+            if bitfont.width(f, name) <= W - 2:
+                font = f
+                break
+        words = name.split()
+        if font is NAME_FONTS[-1] and len(words) == 2:
+            self.centered(font_oled_big, mid - 10, words[0])
+            self.centered(font_oled_big, mid + 10, words[1])
         else:
-            x0, x1 = 0, W
-        font = font_oled_big
-        if bitfont.width(font, name) > x1 - x0:
-            font = font_oled_mid
-        self.centered(font, NAME_Y, name, x0, x1)
-        self.centered(font_oled_small, STATUS_Y, self._status)
+            self.centered(font, mid, name)
 
     # --- task -----------------------------------------------------------
     async def run(self, switcher):
@@ -167,7 +203,7 @@ class Oled:
                     continue
                 now = time.ticks_ms()
                 if self._status_at is None or time.ticks_diff(now, self._status_at) >= STATUS_EVERY_MS:
-                    self._status = self._status_line()
+                    self._status = self._read_status()
                     self._status_at = now
                 menu = switcher.selecting_mode
                 idx = switcher.selection_idx if menu else switcher.active_idx
