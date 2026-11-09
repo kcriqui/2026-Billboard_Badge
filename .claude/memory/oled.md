@@ -39,7 +39,9 @@ the menu (no more LED counting), WiFi signal and battery; an idle pattern
 - Kevin can mount it upside down: SSD1306 0xA0/0xC0 flips 180 deg for free.
 - **Idle Game of Life (Kevin, 2026-11-08):** 8 s after the menu closes
   (`LIFE_AFTER_MS`), full screen, 64x32 cells at 2x2 px, wrap-around; new
-  soup when it dies or repeats (Brent cycle check on a hash). Any menu press
+  soup when it dies, when the live count repeats every 12 generations for
+  24 in a row (only blocks, blinkers, gliders etc. left; ~18 s at most), or
+  on a Brent hash cycle (backstop for rarer periods). Any menu press
   shows the name screen. The OLED now stays on through battery sleep (Kevin
   OK'd it); `power.idle_tick` steps Life every third 150 ms nap, about 2 steps/s, matching
   the measured awake rate (Kevin). Awake target is `LIFE_MS`.

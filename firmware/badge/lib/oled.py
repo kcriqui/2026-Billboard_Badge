@@ -44,6 +44,11 @@ _LIFE_W = const(64)     # cells; each is 2x2 pixels
 _LIFE_H = const(32)
 _LIFE_CELLS = const(2048)
 LIFE_DENSITY = 77       # of 256: share of cells alive in a new soup
+# Only simple patterns left (blocks, blinkers, gliders, ...): the live-cell
+# count repeats every LIFE_PERIOD generations, which covers periods 1, 2, 3,
+# 4, 6 and 12. Restart once it has done so for LIFE_SETTLED generations.
+LIFE_PERIOD = 12
+LIFE_SETTLED = 24
 NAME_FONTS = (font_oled_huge, font_oled_large, font_oled_big, font_oled_mid)
 
 # LiPo resting voltage -> rough charge %, read at the regulator input.
@@ -61,10 +66,12 @@ def battery_pct(volts):
 
 
 @micropython.viper
-def _life_step(cur, nxt):
-    """One generation on a wrap-around grid (one byte per cell)."""
+def _life_step(cur, nxt) -> int:
+    """One generation on a wrap-around grid (one byte per cell); returns
+    how many cells are alive."""
     a = ptr8(cur)
     b = ptr8(nxt)
+    alive = 0
     for y in range(_LIFE_H):
         y0 = y * _LIFE_W
         up = ((y + _LIFE_H - 1) & (_LIFE_H - 1)) * _LIFE_W
@@ -80,6 +87,8 @@ def _life_step(cur, nxt):
             elif n == 2:
                 v = a[y0 + x]
             b[y0 + x] = v
+            alive += v
+    return alive
 
 
 @micropython.viper
@@ -126,6 +135,8 @@ class Oled:
         self._life_gen = 0
         self._life_limit = 1     # cycle check: compare with a saved state,
         self._life_mark = -1     # saved again at each power of two (Brent)
+        self._life_pops = [-1] * LIFE_PERIOD   # recent live-cell counts
+        self._life_same = 0      # generations in a row matching LIFE_PERIOD ago
 
     # --- hardware -------------------------------------------------------
     def find(self):
@@ -263,16 +274,25 @@ class Oled:
         self._life_gen = 0
         self._life_limit = 1
         self._life_mark = -1
+        self._life_pops = [-1] * LIFE_PERIOD
+        self._life_same = 0
+
+    def _life_settled(self, alive):
+        """True once only simple, repeating patterns are left."""
+        slot = self._life_gen % LIFE_PERIOD
+        self._life_same = self._life_same + 1 if self._life_pops[slot] == alive else 0
+        self._life_pops[slot] = alive
+        return self._life_same >= LIFE_SETTLED
 
     def life_advance(self):
         """One generation; a new soup once the old one dies or starts repeating."""
         if self._life_at is None:
             self._life_seed()
         else:
-            _life_step(self._life, self._life_next)
+            alive = _life_step(self._life, self._life_next)
             self._life, self._life_next = self._life_next, self._life
             h = _life_hash(self._life)
-            if h == self._life_mark or h == 0:
+            if alive == 0 or h == self._life_mark or self._life_settled(alive):
                 self._life_seed()
             else:
                 self._life_gen += 1
