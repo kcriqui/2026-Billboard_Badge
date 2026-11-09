@@ -46,9 +46,12 @@ _LIFE_CELLS = const(2048)
 LIFE_DENSITY = 77       # of 256: share of cells alive in a new soup
 # Only simple patterns left (blocks, blinkers, gliders, ...): the live-cell
 # count repeats every LIFE_PERIOD generations, which covers periods 1, 2, 3,
-# 4, 6 and 12. Restart once it has done so for LIFE_SETTLED generations.
+# 4, 6 and 12. Once it has done so for LIFE_SETTLED generations, add gliders
+# to stir things up (Kevin), rather than starting a new game.
 LIFE_PERIOD = 12
 LIFE_SETTLED = 24
+LIFE_GLIDERS = 3
+_GLIDER = ((1, 0), (2, 1), (0, 2), (1, 2), (2, 2))
 NAME_FONTS = (font_oled_huge, font_oled_large, font_oled_big, font_oled_mid)
 
 # LiPo resting voltage -> rough charge %, read at the regulator input.
@@ -271,11 +274,31 @@ class Oled:
         noise = os.urandom(_LIFE_CELLS)
         for i in range(_LIFE_CELLS):
             self._life[i] = 1 if noise[i] < LIFE_DENSITY else 0
+        self._life_watch_reset()
+
+    def _life_watch_reset(self):
         self._life_gen = 0
         self._life_limit = 1
         self._life_mark = -1
         self._life_pops = [-1] * LIFE_PERIOD
         self._life_same = 0
+
+    def _life_stir(self):
+        """Drop in gliders at random places, heading in random directions."""
+        for _ in range(LIFE_GLIDERS):
+            x0, y0, flips = os.urandom(3)
+            x0 %= _LIFE_W
+            y0 %= _LIFE_H
+            for dy in range(-1, 4):      # a clear patch keeps the glider intact
+                for dx in range(-1, 4):
+                    self._life[((y0 + dy) % _LIFE_H) * _LIFE_W + (x0 + dx) % _LIFE_W] = 0
+            for x, y in _GLIDER:
+                if flips & 1:
+                    x = 2 - x
+                if flips & 2:
+                    y = 2 - y
+                self._life[((y0 + y) % _LIFE_H) * _LIFE_W + (x0 + x) % _LIFE_W] = 1
+        self._life_watch_reset()
 
     def _life_settled(self, alive):
         """True once only simple, repeating patterns are left."""
@@ -285,15 +308,18 @@ class Oled:
         return self._life_same >= LIFE_SETTLED
 
     def life_advance(self):
-        """One generation; a new soup once the old one dies or starts repeating."""
+        """One generation. Gliders go in when only repeating patterns are
+        left; a new soup only if everything has died."""
         if self._life_at is None:
             self._life_seed()
         else:
             alive = _life_step(self._life, self._life_next)
             self._life, self._life_next = self._life_next, self._life
             h = _life_hash(self._life)
-            if alive == 0 or h == self._life_mark or self._life_settled(alive):
+            if alive == 0:
                 self._life_seed()
+            elif h == self._life_mark or self._life_settled(alive):
+                self._life_stir()
             else:
                 self._life_gen += 1
                 if self._life_gen >= self._life_limit:
