@@ -11,7 +11,7 @@ Kevin from previews (tools/preview_oled.py).
 
 A while after the menu closes, Conway's Game of Life fills the screen until
 the next menu press. The OLED stays on while battery mode sleeps
-(lib/power.py), and Life steps slowly through the sleep.
+(lib/power.py), and Life keeps stepping about twice a second through it.
 
 If no OLED answers, the task waits and looks again every RETRY_S, so the
 badge works the same without one.

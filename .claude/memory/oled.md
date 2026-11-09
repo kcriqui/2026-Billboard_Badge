@@ -41,4 +41,5 @@ the menu (no more LED counting), WiFi signal and battery; an idle pattern
   (`LIFE_AFTER_MS`), full screen, 64x32 cells at 2x2 px, wrap-around; new
   soup when it dies or repeats (Brent cycle check on a hash). Any menu press
   shows the name screen. The OLED now stays on through battery sleep (Kevin
-  OK'd it); `power.idle_tick` steps Life about every 2 s while asleep.
+  OK'd it); `power.idle_tick` steps Life every third 150 ms nap, about 2 steps/s, matching
+  the measured awake rate (Kevin). Awake target is `LIFE_MS`.
